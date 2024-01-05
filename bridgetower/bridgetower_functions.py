@@ -91,7 +91,7 @@ def get_movie_features(movie_data, n=30):
         extracted. Values are lists representing activations of 768 dimensions
         over the course of n_images / 30.
     """
-    print("running" + "f{movie_data}")
+    print("Running movie through model")
     # set-up model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = BridgeTowerModel.from_pretrained("BridgeTower/bridgetower-base")
@@ -172,9 +172,37 @@ def get_movie_features(movie_data, n=30):
                 data[name].append(avg_feature)
 
             avg_data = {}
-            print(
-                str(round((((i + 1) / n) / (movie_data.shape[0]/30)) * 100, 2))
-                + "%" + " complete")
+            
+            # Create checkpoints
+            ten = round((movie_data.shape[0]/30) * 0.1)
+            twen = round((movie_data.shape[0]/30) * 0.2)
+            thir = round((movie_data.shape[0]/30) * 0.3)
+            four = round((movie_data.shape[0]/30) * 0.4)
+            fif = round((movie_data.shape[0]/30) * 0.5)
+            six = round((movie_data.shape[0]/30) * 0.6)
+            sev = round((movie_data.shape[0]/30) * 0.7)
+            eig = round((movie_data.shape[0]/30) * 0.8)
+            nine = round((movie_data.shape[0]/30) * 0.9)
+
+            if i == ten:
+                print("10% done")
+            elif i == twen:
+                print("20% done")
+            elif i == thir:
+                print("30% done")
+            elif i == four:
+                print("40% done")
+            elif i == fif:
+                print("50% done")
+            elif i == six:
+                print("60% done")
+            elif i == sev:
+                print("70% done")
+            elif i == eig:
+                print("80% done")
+            elif i == nine:
+                print("90% done")
+    print("Complete!")
     patch_embed.remove()
     return data
 
@@ -197,7 +225,7 @@ def get_story_features(story_data, n=20):
         extracted. Values are lists representing activations of 768 dimensions
         over the course of each word in the story.
     """
-    print("running" + "f{story_data}")
+    print("Running story through model")
     # set-up model
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = BridgeTowerModel.from_pretrained("BridgeTower/bridgetower-base")
@@ -254,15 +282,36 @@ def get_story_features(story_data, n=20):
             data[name].append(tensor)
 
         # Print some checkpoints
-        quarter = round(len(story_data) * 0.25)
-        half = round(len(story_data) * 0.5)
-        threequarter = round(len(story_data) * 0.75)
-        if i == quarter:
-            print("25% complete")
-        elif i == half:
-            print("50% complete")
-        elif i == threequarter:
-            print("75% complete")
+        # Create checkpoints
+        ten = round(len(story_data) * 0.1)
+        twen = round(len(story_data) * 0.2)
+        thir = round(len(story_data) * 0.3)
+        four = round(len(story_data) * 0.4)
+        fif = round(len(story_data) * 0.5)
+        six = round(len(story_data) * 0.6)
+        sev = round(len(story_data) * 0.7)
+        eig = round(len(story_data) * 0.8)
+        nine = round(len(story_data) * 0.9)
+
+        if i == ten:
+            print("10% done")
+        elif i == twen:
+            print("20% done")
+        elif i == thir:
+            print("30% done")
+        elif i == four:
+            print("40% done")
+        elif i == fif:
+            print("50% done")
+        elif i == six:
+            print("60% done")
+        elif i == sev:
+            print("70% done")
+        elif i == eig:
+            print("80% done")
+        elif i == nine:
+            print("90% done")
+    print("Complete!")
 
     patch_embed.remove()
     return data
