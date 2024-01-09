@@ -172,7 +172,7 @@ def get_movie_features(movie_data, n=30):
                 data[name].append(avg_feature)
 
             avg_data = {}
-            
+
             # Create checkpoints
             ten = round((movie_data.shape[0]/30) * 0.1)
             twen = round((movie_data.shape[0]/30) * 0.2)
