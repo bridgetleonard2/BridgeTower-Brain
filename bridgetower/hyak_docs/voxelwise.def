@@ -1,34 +1,19 @@
-Bootstrap: docker # Where to get the base image from.
-From: python:3.10-slim # Which container to use as a base image.
-
-%arguments
-    # The version of Python to use:
-    PY_VERSION=3.10
-  
-%files
-    voxelwise_encoding_model.py /opt/local/bin/voxelwise_encoding_model # Copy the script to the container.
+Bootstrap: docker
+From: python:3.10-slim
 
 %post
     # Create a virtual environment in /opt/venv to install our dependencies:
-    /usr/local/bin/python -m venv /opt/venv
+    python -m venv /opt/venv
 
-    # Install `click` and don't cache the downloaded files:
-    /opt/venv/bin/pip install --no-cache-dir numpy scikit-learn warnings
+    # Install libraries and don't cache the downloaded files:
+    /opt/venv/bin/pip install --no-cache-dir numpy scikit-learn
 
     # Print a message to stderr to let the user know that the installation is done:
-    echo "$(/opt/venv/bin/python3 --version): Done installing dependencies." >&2
-
-    # Make the `speedtest` command executable:
-    chmod +x /opt/local/bin/voxelwise_encoding_model
+    echo "$(/opt/venv/bin/python --version): Done installing dependencies." >&2
 
 %environment
-    export PATH="/opt/local/bin:$PATH" # Add the directory with the `speedtest` command to the PATH.
     export PATH="/opt/venv/bin:$PATH" # Add the virtual environment to the PATH.
 
 %runscript
     # Run the Python script with the arguments passed to the container:
-    /opt/local/bin/voxelwise_encoding_model "$@"
-
-%test
-    # Run the speedtest command to check if it works:
-    /opt/local/bin/voxelwise_encoding_model
+    exec /opt/venv/bin/python "$@"
