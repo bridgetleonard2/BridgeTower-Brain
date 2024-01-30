@@ -8,10 +8,8 @@ import warnings
 
 print("Load movie data")
 # Load movie data
-s1_movie_test = np.load("/gscratch/scrubbed/bll313/data/moviedata/S1 \
-                        /test.npy")
-s1_movie_train = np.load("/gscratch/scrubbed/bll313/data/moviedata/S1 \
-                         /train.npy")
+s1_movie_test = np.load("data/moviedata/S1/test.npy")
+s1_movie_train = np.load("data/moviedata/S1/train.npy")
 
 # Assuming your data is in a NumPy array with shape (n_tr, z, x, y)
 # Creating a mask where the data is not NaN
@@ -34,32 +32,19 @@ s1_movie_fmri = np.concatenate((s1_movie_train_flat, s1_movie_test_flat),
 print("Load movie features")
 # Load in movie feature vectors
 # movie data
-test = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-               /test_data.npy")
-train00 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_00_data.npy")
-train01 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_01_data.npy")
-train02 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_02_data.npy")
-train03 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_03_data.npy")
-train04 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_04_data.npy")
-train05 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_05_data.npy")
-train06 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_06_data.npy")
-train07 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_07_data.npy")
-train08 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_08_data.npy")
-train09 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_09_data.npy")
-train10 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_10_data.npy")
-train11 = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
-                  /train_11_data.npy")
+test = np.load("data/feature_vectors/movie/test_data.npy")
+train00 = np.load("data/feature_vectors/movie/train_00_data.npy")
+train01 = np.load("data/feature_vectors/movie/train_01_data.npy")
+train02 = np.load("data/feature_vectors/movie/train_02_data.npy")
+train03 = np.load("data/feature_vectors/movie/train_03_data.npy")
+train04 = np.load("data/feature_vectors/movie/train_04_data.npy")
+train05 = np.load("data/feature_vectors/movie/train_05_data.npy")
+train06 = np.load("data/feature_vectors/movie/train_06_data.npy")
+train07 = np.load("data/feature_vectors/movie/train_07_data.npy")
+train08 = np.load("data/feature_vectors/movie/train_08_data.npy")
+train09 = np.load("data/feature_vectors/movie/train_09_data.npy")
+train10 = np.load("data/feature_vectors/movie/train_10_data.npy")
+train11 = np.load("data/feature_vectors/movie/train_11_data.npy")
 
 movie_features = np.vstack((train00, train01, train02, train03, train04,
                             train05, train06, train07, train08, train09,
@@ -90,10 +75,10 @@ kf = KFold(n_splits=5)  # Example of 5-fold cross-validation
 best_alphas = np.zeros(n_voxels)
 coefficients = np.zeros((n_voxels, features_reshaped.shape[1]))
 
-warnings.filterwarnings("ignore")
-
 
 def process_voxel(voxel, features_reshaped, fmri_data, alphas, kf):
+    warnings.filterwarnings("ignore")
+    
     ridge_cv = RidgeCV(alphas=alphas, cv=kf)
     ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
     return ridge_cv.alpha_, ridge_cv.coef_
@@ -105,7 +90,7 @@ print("Voxel 1:", test_alpha, test_coef[:5])
 
 print("Running all voxels...")
 # Parallel processing
-results = Parallel(n_jobs=4, backend="loky")(delayed(process_voxel)(voxel, features_reshaped, s1_movie_fmri, alphas, kf) for voxel in tqdm(range(n_voxels)))
+results = Parallel(n_jobs=8, backend="loky")(delayed(process_voxel)(voxel, features_reshaped, s1_movie_fmri, alphas, kf) for voxel in tqdm(range(n_voxels)))
 
 # Extract results
 best_alphas, coefficients = zip(*results)
