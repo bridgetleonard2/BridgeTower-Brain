@@ -8,7 +8,7 @@ Welcome to the BridgeTower project! This repository is dedicated to investigatin
 
 ### Cognitive Psychology meets Data Science
 
-As a cognitive psychologist and data scientist, I am deeply intrigued by the prospect of leveraging neural networks to comprehend and predict cognitive processes. The foundation for this exploration is inspired by the groundbreaking work conducted by the Huth Lab at UT Austin, as presented in their paper [**(https://arxiv.org/abs/2305.12248)**]. In their study, Huth and colleagues demonstrated the remarkable ability of visual and language encoding models to predict fMRI responses to diverse stimuli, highlighting the cross-modality transferability of neural representations within the human brain.
+As a cognitive psychologist and data scientist, I am deeply intrigued by the prospect of leveraging neural networks to comprehend and predict cognitive processes. The foundation for this exploration is inspired by the groundbreaking work conducted by the Huth Lab at UT Austin, as presented in their paper **(https://arxiv.org/abs/2305.12248)**. In their study, Huth and colleagues demonstrated the remarkable ability of visual and language encoding models to predict fMRI responses to diverse stimuli, highlighting the cross-modality transferability of neural representations within the human brain.
 
 ## Replication and Expansion
 
