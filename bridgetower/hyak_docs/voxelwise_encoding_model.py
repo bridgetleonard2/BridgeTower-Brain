@@ -78,7 +78,7 @@ coefficients = np.zeros((n_voxels, features_reshaped.shape[1]))
 
 def process_voxel(voxel, features_reshaped, fmri_data, alphas, kf):
     warnings.filterwarnings("ignore")
-    
+
     ridge_cv = RidgeCV(alphas=alphas, cv=kf)
     ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
     return ridge_cv.alpha_, ridge_cv.coef_

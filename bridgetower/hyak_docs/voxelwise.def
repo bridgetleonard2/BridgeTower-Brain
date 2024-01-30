@@ -1,19 +1,16 @@
 Bootstrap: docker
-From: python:3.10-slim
+From: python:3.11-slim
 
 %post
-    # Create a virtual environment in /opt/venv to install our dependencies:
-    python -m venv /opt/venv
+    # Update and install necessary packages
+    apt-get update && apt-get install -y --no-install-recommends build-essential
 
-    # Install libraries and don't cache the downloaded files:
-    /opt/venv/bin/pip install --no-cache-dir numpy scikit-learn
+    # Install NumPy and scikit-learn
+    pip install numpy scikit-learn
 
-    # Print a message to stderr to let the user know that the installation is done:
-    echo "$(/opt/venv/bin/python --version): Done installing dependencies." >&2
-
-%environment
-    export PATH="/opt/venv/bin:$PATH" # Add the virtual environment to the PATH.
+    # Clean up unnecessary files to reduce image size
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 %runscript
-    # Run the Python script with the arguments passed to the container:
-    exec /opt/venv/bin/python "$@"
+    # Run the Python script with the arguments passed to the container
+    exec python "$@"
