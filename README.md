@@ -34,7 +34,7 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/your-username/BridgeTower.git
+   git clone https://github.com/bridgetleonard2/BridgeTower-Brain.git
    cd BridgeTower
 
 2. **Install Dependencies:**
