@@ -2,9 +2,11 @@ import numpy as np
 # We will be using L2-regularized linear regression
 from sklearn.linear_model import RidgeCV
 from sklearn.model_selection import KFold
+from joblib import Parallel, delayed
+from tqdm import tqdm  # Progress bar
 import warnings
 
-
+print("Load movie data")
 # Load movie data
 s1_movie_test = np.load("/gscratch/scrubbed/bll313/data/moviedata/S1 \
                         /test.npy")
@@ -29,6 +31,7 @@ s1_movie_train_flat = s1_movie_train[mask].reshape(s1_movie_train.shape[0], -1)
 s1_movie_fmri = np.concatenate((s1_movie_train_flat, s1_movie_test_flat),
                                axis=0)
 
+print("Load movie features")
 # Load in movie feature vectors
 # movie data
 test = np.load("/gscratch/scrubbed/bll313/data/feature_vectors/movie \
@@ -90,45 +93,25 @@ coefficients = np.zeros((n_voxels, features_reshaped.shape[1]))
 warnings.filterwarnings("ignore")
 
 
-def test():
-    for voxel in range(5):
-        ridge_cv = RidgeCV(alphas=alphas, cv=kf)
-        ridge_cv.fit(features_reshaped, s1_movie_fmri[:, voxel])
-        print("Voxel", voxel, "best alpha:", ridge_cv.alpha_)
-        print("Voxel", voxel, "first ten coefficients:", ridge_cv.coef_)
-
-
-test()
-
-for voxel in range(n_voxels):
+def process_voxel(voxel, features_reshaped, fmri_data, alphas, kf):
     ridge_cv = RidgeCV(alphas=alphas, cv=kf)
-    ridge_cv.fit(features_reshaped, s1_movie_fmri[:, voxel])
-    best_alphas[voxel] = ridge_cv.alpha_
-    coefficients[voxel, :] = ridge_cv.coef_
+    ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
+    return ridge_cv.alpha_, ridge_cv.coef_
 
-    # alphas = np.array(best_alphas)
-    # coef = np.array(coefficients)
-    np.save('/gscratch/scrubbed/bll313/results/movie/best_alphas.npy',
-            best_alphas)
-    np.save('/gscratch/scrubbed/bll313/results/movie/coefficients.npy',
-            coefficients)
-    # Print checkpoints
-    if voxel == round(n_voxels*0.1):
-        print("10% done")
-    elif voxel == round(n_voxels*0.2):
-        print("20% done")
-    elif voxel == round(n_voxels*0.3):
-        print("30% done")
-    elif voxel == round(n_voxels*0.4):
-        print("40% done")
-    elif voxel == round(n_voxels*0.5):
-        print("50% done")
-    elif voxel == round(n_voxels*0.6):
-        print("60% done")
-    elif voxel == round(n_voxels*0.7):
-        print("70% done")
-    elif voxel == round(n_voxels*0.8):
-        print("80% done")
-    elif voxel == round(n_voxels*0.9):
-        print("90% done")
+
+print("Test with voxel 1")
+test_alpha, test_coef = process_voxel(0, features_reshaped, s1_movie_fmri, alphas, kf)
+print("Voxel 1:", test_alpha, test_coef[:5])
+
+print("Running all voxels...")
+# Parallel processing
+results = Parallel(n_jobs=4, backend="loky")(delayed(process_voxel)(voxel, features_reshaped, s1_movie_fmri, alphas, kf) for voxel in tqdm(range(n_voxels)))
+
+# Extract results
+best_alphas, coefficients = zip(*results)
+
+# Save results
+np.save('results/movie/best_alphas.npy', best_alphas)
+np.save('results/movie/coefficients.npy', coefficients)
+
 print("Complete")
