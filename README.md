@@ -45,6 +45,7 @@ This project utilizes the BridgeTower model, which is part of the [Hugging Face 
 ```bash
 pip install transformers
 pip install -r requirements.txt
+```
 
 1. **Clone the Repository:**
    ```bash
