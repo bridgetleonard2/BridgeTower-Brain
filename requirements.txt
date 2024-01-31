@@ -1,0 +1,15 @@
+# Core library for neural networks
+torch==2.1.1
+
+# Hugging Face Transformers for the BridgeTower model
+transformers==4.36.0.dev0
+
+# Data handling
+numpy==1.26.2
+
+# Machine learning tools
+scikit-learn==1.3.2
+
+# Plotting and visualization
+matplotlib==3.8.2
+seaborn==0.13.0
