@@ -1,8 +1,9 @@
 # BridgeTower: Investigating Multi-Modal Transformers and Their Predictive Capabilities on Human Brain Activity
 
 ## Overview
+## Overview
 
-Welcome to the BridgeTower project! This repository is dedicated to investigating the multi-modal transformer, BridgeTower, and its predictive capabilities compared to the human brain. As a collaborative effort between cognitive psychology and data science, this project aims to explore the potential of neural networks in capturing and predicting mechanisms of the human brain.
+Welcome to the BridgeTower project! This repository is dedicated to investigating the multi-modal transformer, [BridgeTower](https://github.com/microsoft/BridgeTower), and its predictive capabilities compared to the human brain. Leveraging the powerful [Hugging Face Transformers library](https://huggingface.co/transformers/), we explore the potential of neural networks in capturing and predicting mechanisms of the human brain. This collaborative effort between cognitive psychology and data science aims to deepen our understanding of neural networks and human cognition.
 
 ## Motivation
 
@@ -31,6 +32,19 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
 - **Container:** Contains a script and an Apptainer definition file to run voxelwise encoding models on an HPC server.
 
 ## Getting Started
+
+### Prerequisites
+
+Before diving into the project, ensure you have the following prerequisites installed:
+
+- Python (version 3.8 or later)
+- pip (latest version)
+
+This project utilizes the BridgeTower model, which is part of the [Hugging Face Transformers library](https://huggingface.co/transformers/). To install Hugging Face Transformers and other dependencies:
+
+```bash
+pip install transformers
+pip install -r requirements.txt
 
 1. **Clone the Repository:**
    ```bash
