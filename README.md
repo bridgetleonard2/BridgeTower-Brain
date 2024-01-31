@@ -28,7 +28,7 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
 - **Models:** Houses the implementation of BridgeTower and other relevant models.
 - **Notebooks:** Jupyter notebooks detailing the step-by-step process of replication and subsequent investigations.
 - **Results:** Stores the results of experiments, visualizations, and analysis outputs.
-- **Scripts:** Supplementary scripts for data preprocessing, model training, and evaluation.
+- **Container:** Contains a script and an Apptainer definition file to run voxelwise encoding models on an HPC server.
 
 ## Getting Started
 
