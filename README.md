@@ -25,7 +25,7 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
 ## Project Structure
 
 - **data.zip:** Contains the datasets used for training and evaluation.
-   - raw_stimuli: Contains repositories from past experiments including `shortclips`: a movie watching experiment (), `textgrids`: a story listening experiment (), and `test_data` for a BridgeTower introduction.
+   - raw_stimuli: Contains repositories from past experiments including `shortclips`: [a dataset created from a movie watching experiment](https://doi.gin.g-node.org/10.12751/g-node.vy1zjd/), `textgrids`: [a data created from a story listening experiment](https://www.nature.com/articles/s41597-023-02437-z), and `test_data` for a BridgeTower introduction.
    - fmri_data: Contains the corresponding fMRI data for the shortclips and textgrids stimuli.
 - **Models:** Houses the implementation of BridgeTower and other relevant models.
 - **Notebooks:** Jupyter notebooks detailing the step-by-step process of replication and subsequent investigations.
