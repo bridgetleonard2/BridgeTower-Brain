@@ -1,7 +1,6 @@
 # BridgeTower: Investigating Multi-Modal Transformers and Their Predictive Capabilities on Human Brain Activity
 
 ## Overview
-## Overview
 
 Welcome to the BridgeTower project! This repository is dedicated to investigating the multi-modal transformer, [BridgeTower](https://github.com/microsoft/BridgeTower), and its predictive capabilities compared to the human brain. Leveraging the powerful [Hugging Face Transformers library](https://huggingface.co/transformers/), we explore the potential of neural networks in capturing and predicting mechanisms of the human brain. This collaborative effort between cognitive psychology and data science aims to deepen our understanding of neural networks and human cognition.
 
@@ -25,7 +24,9 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
 
 ## Project Structure
 
-- **Data:** Contains the datasets used for training and evaluation.
+- **data.zip:** Contains the datasets used for training and evaluation.
+   - raw_stimuli: Contains repositories from past experiments including `shortclips`: a movie watching experiment (), `textgrids`: a story listening experiment (), and `test_data` for a BridgeTower introduction.
+   - fmri_data: Contains the corresponding fMRI data for the shortclips and textgrids stimuli.
 - **Models:** Houses the implementation of BridgeTower and other relevant models.
 - **Notebooks:** Jupyter notebooks detailing the step-by-step process of replication and subsequent investigations.
 - **Results:** Stores the results of experiments, visualizations, and analysis outputs.
