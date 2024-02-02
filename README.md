@@ -47,6 +47,24 @@ This project utilizes the BridgeTower model, which is part of the [Hugging Face 
 pip install transformers
 pip install -r requirements.txt
 ```
+### Data Sources
+
+Data for model training and testing is available from open-source datasets. There are two repositories for the raw stimuli data and a single repository containing the fMRI data for these stimuli. Links to the datasets and descriptions are found below. Information on where to place them in this repository to make them accessible to the notebooks is found in `docs/data_sources.md`
+
+- [Raw movie stimuli](https://gin.g-node.org/gallantlab/shortclips/src/master/stimuli): *Only the `stimuli` directory is needed for the notebooks.* This dataset contains BOLD fMRI responses in human subjects viewing a set of natural short movie clips. The functional data were collected in five subjects, in three sessions over three separate days for each subject. Details of the experiment are described in the original publication [1].
+
+      [1] Huth, Alexander G., Nishimoto, S., Vu, A. T., & Gallant, J. L. (2012). A continuous semantic space describes the representation of thousands of object and action categories across the human brain. Neuron, 76(6), 1210-1224. https://dx.doi.org/10.1016/j.neuron.2012.10.014
+      
+      If you publish any work using the dataset, please cite the original publication [1], and cite the dataset [1b] in the following recommended format:
+      
+      [1b] Huth, A. G., Nishimoto, S., Vu, A. T., Dupre la Tour, T., & Gallant, J. L. (2022). Gallant Lab Natural Short Clips 3T fMRI Data. https://dx.doi.org/10.12751/g-node.vy1zjd
+
+- [Raw story stimuli]((https://openneuro.org/datasets/ds003020/versions/2.2.0): *Only the `derivative/TextGrids` directory is needed for the notebooks.* This dataset now has a dataset descriptor currently available in Scientific Data, that describes all of the data and code available for working with this dataset. It can be found:
+
+   LeBel, A., Wagner, L., Jain, S. et al. A natural language fMRI dataset for voxelwise encoding models. Sci Data 10, 555 (2023). https://doi.org/10.1038/s41597-023-02437-z
+
+- [fMRI data](https://berkeley.app.box.com/s/l95gie5xtv56zocsgugmb7fs12nujpog/folder/142176724641): An fMRI dataset using story and movie stimuli.
+
 
 1. **Clone the Repository:**
    ```bash
