@@ -71,12 +71,15 @@ def process_voxel(voxel, features_reshaped, fmri_data, alphas, kf):
 
 
 print("Test with voxel 1")
-test_alpha, test_coef = process_voxel(0, features_reshaped, s1_movie_fmri, alphas, kf)
+test_alpha, test_coef = process_voxel(0, features_reshaped, s1_movie_fmri,
+                                      alphas, kf)
 print("Voxel 1:", test_alpha, test_coef[:5])
 
 print("Running all voxels...")
 # Parallel processing
-results = Parallel(n_jobs=8, backend="loky")(delayed(process_voxel)(voxel, features_reshaped, s1_movie_fmri, alphas, kf) for voxel in tqdm(range(n_voxels)))
+results = Parallel(n_jobs=8, backend="loky")(
+    delayed(process_voxel)(voxel, features_reshaped, s1_movie_fmri, alphas, kf)
+    for voxel in tqdm(range(n_voxels)))
 
 # Extract results
 best_alphas, coefficients = zip(*results)
