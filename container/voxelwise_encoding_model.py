@@ -8,31 +8,17 @@ import warnings
 
 print("Load movie data")
 # Load movie data
-s1_movie_test = np.load("data/moviedata/S1/test.npy")
 s1_movie_train = np.load("data/moviedata/S1/train.npy")
-
-# Assuming your data is in a NumPy array with shape (n_tr, z, x, y)
-# Creating a mask where the data is not NaN
-mask = ~np.isnan(s1_movie_test)
-
-# Apply the mask and then flatten
-# This will keep only the non-NaN values
-s1_movie_test_flat = s1_movie_test[mask].reshape(s1_movie_test.shape[0], -1)
 
 mask = ~np.isnan(s1_movie_train)
 
 # Apply the mask and then flatten
 # This will keep only the non-NaN values
-s1_movie_train_flat = s1_movie_train[mask].reshape(s1_movie_train.shape[0], -1)
-
-# Combine final flattened movie data
-s1_movie_fmri = np.concatenate((s1_movie_train_flat, s1_movie_test_flat),
-                               axis=0)
+s1_movie_fmri = s1_movie_train[mask].reshape(s1_movie_train.shape[0], -1)
 
 print("Load movie features")
 # Load in movie feature vectors
 # movie data
-test = np.load("data/feature_vectors/movie/test_data.npy")
 train00 = np.load("data/feature_vectors/movie/train_00_data.npy")
 train01 = np.load("data/feature_vectors/movie/train_01_data.npy")
 train02 = np.load("data/feature_vectors/movie/train_02_data.npy")
@@ -48,7 +34,7 @@ train11 = np.load("data/feature_vectors/movie/train_11_data.npy")
 
 movie_features = np.vstack((train00, train01, train02, train03, train04,
                             train05, train06, train07, train08, train09,
-                            train10, train11, test))
+                            train10, train11))
 
 # Finite impulse response delays
 delays = [2, 4, 6, 8]  # Delays in seconds
