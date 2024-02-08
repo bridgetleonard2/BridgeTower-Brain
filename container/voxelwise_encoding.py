@@ -64,22 +64,14 @@ kf = KFold(n_splits=3, shuffle=True, random_state=42)
 best_alphas = np.zeros(1622)
 coefficients = np.zeros((1622, features_reshaped.shape[1]))
 
-param_distributions = {
-    'alpha': loguniform(1e-5, 1e5)
-}
-
 
 def process_voxel(voxel, features_reshaped, fmri_data, alphas, kf):
     warnings.filterwarnings("ignore")
 
-    ridge_cv = RidgeCV(cv=kf)  # RidgeCV(alphas=alphas, cv=kf)
-
-    # Perform randomized search
-    random_search = RandomizedSearchCV(ridge_cv, param_distributions,
-                                       n_iter=50, cv=kf)
-    random_search.fit(features_reshaped, fmri_data[:, voxel])
+    ridge_cv = RidgeCV(alphas=alphas, cv=kf)  # RidgeCV(alphas=alphas, cv=kf)
+    ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
     # ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
-    return random_search.alpha_, random_search.coef_
+    return ridge_cv.alpha_, ridge_cv.coef_
 
 
 print("Test with voxel 1")
@@ -91,13 +83,13 @@ print("Running all voxels...")
 # Parallel processing
 results = Parallel(n_jobs=24, backend="loky")(
     delayed(process_voxel)(voxel, features_reshaped, s1_movie_fmri, alphas, kf)
-    for voxel in tqdm(range(0, 1623)))
+    for voxel in tqdm(range(3245, 4867)))
 
 # Extract results
 best_alphas, coefficients = zip(*results)
 
 # Save results
-np.save('results/movie/best_alphas_0-1622.npy', best_alphas)
-np.save('results/movie/coefficients_0-1622.npy', coefficients)
+np.save('results/movie/best_alphas_3245-4866.npy', best_alphas)
+np.save('results/movie/coefficients_3245-4866.npy', coefficients)
 
 print("Complete")

@@ -4,7 +4,6 @@ from sklearn.linear_model import RidgeCV
 from sklearn.model_selection import KFold, RandomizedSearchCV
 from joblib import Parallel, delayed
 from tqdm import tqdm  # Progress bar
-from scipy.stats import loguniform
 
 import warnings
 
@@ -61,42 +60,52 @@ alphas = np.logspace(-6, 6, 50)  # Range for alphas
 # Use a smaller number of folds
 kf = KFold(n_splits=3, shuffle=True, random_state=42)
 
-best_alphas = np.zeros(n_voxels)
-coefficients = np.zeros((n_voxels, features_reshaped.shape[1]))
-
-param_distributions = {
-    'alphas': loguniform(1e-5, 1e5)
-}
+best_alphas = np.zeros(1600)
+coefficients = np.zeros((1600, features_reshaped.shape[1]))
 
 
+# Function to process a chunk of voxels
+def process_voxel_chunk(voxel_chunk, features_reshaped, fmri_data, alphas, kf):
+    results = []
+    for voxel in tqdm(voxel_chunk, desc="Processing chunk"):
+        result = process_voxel(voxel, features_reshaped, fmri_data, alphas, kf)
+        results.append(result)
+    return results
+
+# Function to process a single voxel
 def process_voxel(voxel, features_reshaped, fmri_data, alphas, kf):
     warnings.filterwarnings("ignore")
+    ridge_cv = RidgeCV(alphas=alphas, cv=kf)
+    ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
+    return voxel, ridge_cv.alpha_, ridge_cv.coef_
 
-    ridge_cv = RidgeCV(cv=kf)  # RidgeCV(alphas=alphas, cv=kf)
+# Split voxels into chunks
+num_cpus = 8  # Change to 16 if using 16 CPUs
+voxel_start = 4867
+num_voxels = 1600
+voxel_end = voxel_start + num_voxels + 1  # Add 1 to include voxel 6567
 
-    # Perform randomized search
-    random_search = RandomizedSearchCV(ridge_cv, param_distributions, n_iter=50, cv=kf)
-    random_search.fit(features_reshaped, fmri_data[:, voxel])
-    # ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
-    return random_search.alpha_, random_search.coef_
+voxels_per_chunk = num_voxels // num_cpus
+voxel_chunks = []
 
+for i in range(voxel_start, voxel_end, voxels_per_chunk):
+    chunk_end = min(i + voxels_per_chunk, voxel_end)
+    voxel_chunks.append(list(range(i, chunk_end)))
 
-print("Test with voxel 1")
-test_alpha, test_coef = process_voxel(0, features_reshaped, s1_movie_fmri,
-                                      alphas, kf)
-print("Voxel 1:", test_alpha, test_coef[:5])
+# Process each chunk in parallel
+results = Parallel(n_jobs=num_cpus, backend="loky")(
+    delayed(process_voxel_chunk)(chunk, features_reshaped, s1_movie_fmri, alphas, kf)
+    for chunk in voxel_chunks
+)
 
-print("Running all voxels...")
-# Parallel processing
-results = Parallel(n_jobs=8, backend="loky")(
-    delayed(process_voxel)(voxel, features_reshaped, s1_movie_fmri, alphas, kf)
-    for voxel in tqdm(range(n_voxels)))
+# Flatten the results list
+results = [result for chunk_results in results for result in chunk_results]
 
-# Extract results
-best_alphas, coefficients = zip(*results)
+# Update best_alphas and coefficients
+for voxel, alpha, coef in results:
+    best_alphas[voxel] = alpha
+    coefficients[voxel] = coef
 
 # Save results
-np.save('results/movie/best_alphas.npy', best_alphas)
-np.save('results/movie/coefficients.npy', coefficients)
-
-print("Complete")
+np.save('results/movie/best_alphas_4867-6467.npy', best_alphas)
+np.save('results/movie/coefficients_4867-6467.npy', coefficients)

@@ -1,14 +1,13 @@
 import numpy as np
 # We will be using L2-regularized linear regression
 from sklearn.linear_model import RidgeCV
-from sklearn.model_selection import KFold, RandomizedSearchCV
+from sklearn.model_selection import KFold
 from joblib import Parallel, delayed
 from tqdm import tqdm  # Progress bar
-from scipy.stats import loguniform
-
+import cupy as cp 
 import warnings
 
-print("Load movie data")
+
 # Load movie data
 s1_movie_train = np.load("data/moviedata/S1/train.npy")
 
@@ -61,42 +60,34 @@ alphas = np.logspace(-6, 6, 50)  # Range for alphas
 # Use a smaller number of folds
 kf = KFold(n_splits=3, shuffle=True, random_state=42)
 
-best_alphas = np.zeros(n_voxels)
-coefficients = np.zeros((n_voxels, features_reshaped.shape[1]))
-
-param_distributions = {
-    'alphas': loguniform(1e-5, 1e5)
-}
+best_alphas = np.zeros(1622)
+coefficients = np.zeros((1622, features_reshaped.shape[1]))
 
 
-def process_voxel(voxel, features_reshaped, fmri_data, alphas, kf):
-    warnings.filterwarnings("ignore")
-
-    ridge_cv = RidgeCV(cv=kf)  # RidgeCV(alphas=alphas, cv=kf)
-
-    # Perform randomized search
-    random_search = RandomizedSearchCV(ridge_cv, param_distributions, n_iter=50, cv=kf)
-    random_search.fit(features_reshaped, fmri_data[:, voxel])
-    # ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
-    return random_search.alpha_, random_search.coef_
+# Define function for processing a voxel on a GPU
+def process_voxel_gpu(voxel, features_reshaped, fmri_data, alphas, kf):
+    with cp.cuda.Device(voxel % cp.cuda.Device.count()):
+        ridge_cv = RidgeCV(alphas=alphas, cv=kf)
+        ridge_cv.fit(cp.asarray(features_reshaped), cp.asarray(fmri_data[:, voxel]))
+    return ridge_cv.alpha_, ridge_cv.coef_
 
 
-print("Test with voxel 1")
-test_alpha, test_coef = process_voxel(0, features_reshaped, s1_movie_fmri,
-                                      alphas, kf)
-print("Voxel 1:", test_alpha, test_coef[:5])
+# Define function for parallel processing across multiple GPUs
+def process_voxels_parallel(features_reshaped, fmri_data, alphas, kf):
+    results = Parallel(n_jobs=-1, backend="loky")(
+        delayed(process_voxel_gpu)(voxel, features_reshaped, fmri_data, alphas, kf)
+        for voxel in range(3245, 4867))
+    return results
 
-print("Running all voxels...")
-# Parallel processing
-results = Parallel(n_jobs=8, backend="loky")(
-    delayed(process_voxel)(voxel, features_reshaped, s1_movie_fmri, alphas, kf)
-    for voxel in tqdm(range(n_voxels)))
+
+# Example usage
+results = process_voxels_parallel(features_reshaped, s1_movie_fmri, alphas, kf)
 
 # Extract results
 best_alphas, coefficients = zip(*results)
 
 # Save results
-np.save('results/movie/best_alphas.npy', best_alphas)
-np.save('results/movie/coefficients.npy', coefficients)
+np.save('results/movie/best_alphas_3245-4866.npy', best_alphas)
+np.save('results/movie/coefficients_3245-4866.npy', coefficients)
 
 print("Complete")
