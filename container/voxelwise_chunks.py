@@ -79,33 +79,40 @@ def process_voxel(voxel, features_reshaped, fmri_data, alphas, kf):
     ridge_cv.fit(features_reshaped, fmri_data[:, voxel])
     return voxel, ridge_cv.alpha_, ridge_cv.coef_
 
-# Split voxels into chunks
-num_cpus = 8  # Change to 16 if using 16 CPUs
-voxel_start = 4867
-num_voxels = 1600
-voxel_end = voxel_start + num_voxels + 1  # Add 1 to include voxel 6567
+start_batch = 16000
 
-voxels_per_chunk = num_voxels // num_cpus
-voxel_chunks = []
+for i in range(40):
+    # Split voxels into chunks
+    num_cpus = 16  # Change to 16 if using 16 CPUs
+    num_voxels = 1600
+    voxel_start = start_batch + (i * num_voxels)
+    voxel_end = voxel_start + num_voxels
 
-for i in range(voxel_start, voxel_end, voxels_per_chunk):
-    chunk_end = min(i + voxels_per_chunk, voxel_end)
-    voxel_chunks.append(list(range(i, chunk_end)))
+    voxels_per_chunk = num_voxels // num_cpus
+    voxel_chunks = []
 
-# Process each chunk in parallel
-results = Parallel(n_jobs=num_cpus, backend="loky")(
-    delayed(process_voxel_chunk)(chunk, features_reshaped, s1_movie_fmri, alphas, kf)
-    for chunk in voxel_chunks
-)
+    for i in range(voxel_start, voxel_end, voxels_per_chunk):
+        chunk_end = min(i + voxels_per_chunk, voxel_end)
+        voxel_chunks.append(list(range(i, chunk_end)))
 
-# Flatten the results list
-results = [result for chunk_results in results for result in chunk_results]
 
-# Update best_alphas and coefficients
-for voxel, alpha, coef in results:
-    best_alphas[voxel] = alpha
-    coefficients[voxel] = coef
+    # Process each chunk in parallel
+    results = Parallel(n_jobs=num_cpus, backend="loky")(
+        delayed(process_voxel_chunk)(chunk, features_reshaped, s1_movie_fmri, alphas, kf)
+        for chunk in voxel_chunks
+    )
 
-# Save results
-np.save('results/movie/best_alphas_4867-6467.npy', best_alphas)
-np.save('results/movie/coefficients_4867-6467.npy', coefficients)
+    # Flatten the results list
+    results = [result for chunk_results in results for result in chunk_results]
+
+    # Update best_alphas and coefficients
+    for voxel, alpha, coef in results:
+        best_alphas[voxel - voxel_start] = alpha
+        coefficients[voxel - voxel_start] = coef
+
+    filename_alphas = 'results/movie/best_alphas_' + str(voxel_start) + '_' + str(voxel_end - 1) + '.npy'
+    filename_coefficients = 'results/movie/coefficients_' + str(voxel_start) + '_' + str(voxel_end - 1) + '.npy'
+    
+    # Save results
+    np.save(filename_alphas, best_alphas)
+    np.save(filename_coefficients, coefficients)
