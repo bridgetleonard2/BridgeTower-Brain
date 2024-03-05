@@ -1,11 +1,24 @@
 import numpy as np
-import functions
+from sklearn.model_selection import check_cv
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn import set_config
+from functions import prep_data
+from functions import generate_leave_one_run_out
+from functions import Delayer
+from himalaya.kernel_ridge import KernelRidgeCV
+from himalaya.backend import set_backend
+
+
+# CHOOSE SUBJECT
+subject = 'S1'
 
 # Load data
 print("Load movie data")
 # Load fMRI data
-s1_movie_train = np.load("data/moviedata/S1/train.npy")
-s1_movie_fmri = remove_nan(s1_movie_train)
+# Using all data for cross-modality encoding model
+fmri_movie_train = np.load("data/moviedata/S1/train.npy")
+fmri_movie_test = np.load("data/moviedata/S1/train.npy")
 
 print("Load movie features")
 # Load in movie feature vectors
