@@ -51,7 +51,6 @@ odetostepfather_fmri, odetostepfather_features = prep_data(fmri_odetostepfather,
 souls_fmri, souls_features = prep_data(fmri_souls, souls)
 undertheinfluence_fmri, undertheinfluence_features = prep_data(fmri_undertheinfluence, undertheinfluence)
 
-
 fmri_arrays = [ai_fmri, avatar_fmri, howtodraw_fmri, legacy_fmri,
                life_fmri, yankees_fmri, naked_fmri,
                odetostepfather_fmri, souls_fmri, undertheinfluence_fmri]
