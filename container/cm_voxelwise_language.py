@@ -31,6 +31,7 @@ naked = np.load("data/feature_vectors/story/naked_data.npy")
 odetostepfather = np.load("data/feature_vectors/story/odetostepfather_data.npy")
 souls = np.load("data/feature_vectors/story/souls_data.npy")
 
+
 def remove_nan(data):
     mask = ~np.isnan(data)
 

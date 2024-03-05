@@ -6,7 +6,7 @@ From: python:3.11-slim
     apt-get update && apt-get install -y --no-install-recommends build-essential
 
     # Install NumPy and scikit-learn
-    pip install numpy scikit-learn scipy
+    pip install numpy scikit-learn scipy himalaya
 
     # Clean up unnecessary files to reduce image size
     apt-get clean && rm -rf /var/lib/apt/lists/*
