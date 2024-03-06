@@ -3,6 +3,7 @@ import torch
 import numpy as np
 import re
 import h5py
+from scipy.signal import resample
 from torch.nn.functional import pad
 
 
@@ -315,3 +316,66 @@ def get_story_features(story_data, n=20):
 
     patch_embed.remove()
     return data
+
+
+def remove_nan(data):
+    mask = ~np.isnan(data)
+
+    # Apply the mask and then flatten
+    # This will keep only the non-NaN values
+    data_reshaped = data[mask].reshape(data.shape[0], -1)
+
+    print("fMRI shape:", data_reshaped.shape)
+    return data_reshaped
+
+
+def resample_to_acq(feature_data, fmri_data):
+    dimensions = fmri_data.shape[0]
+    data_transposed = feature_data.T
+    data_resampled = np.empty((data_transposed.shape[0], dimensions))
+
+    for i in range(data_transposed.shape[0]):
+        data_resampled[i, :] = resample(data_transposed[i, :],
+                                        dimensions, window=('kaiser', 14))
+
+    print("Shape after resampling:", data_resampled.T.shape)
+    return data_resampled.T
+
+
+def prep_data(fmri_data, feature_data):
+    fmri_reshaped = remove_nan(fmri_data)
+
+    feature_resampled = resample_to_acq(feature_data, fmri_reshaped)
+
+    return fmri_reshaped, feature_resampled
+
+
+def safe_correlation(x, y):
+    """Calculate the Pearson correlation coefficient safely."""
+    # Mean centering
+    x_mean = x - np.mean(x)
+    y_mean = y - np.mean(y)
+    
+    # Numerator: sum of the product of mean-centered variables
+    numerator = np.sum(x_mean * y_mean)
+    
+    # Denominator: sqrt of the product of the sums of squared mean-centered variables
+    denominator = np.sqrt(np.sum(x_mean**2) * np.sum(y_mean**2))
+    
+    # Safe division
+    if denominator == 0:
+        # Return NaN or another value to indicate undefined correlation
+        return np.nan
+    else:
+        return numerator / denominator
+
+
+def calc_correlation(predicted_fMRI, real_fMRI):
+    # Calculate correlations for each voxel
+    correlation_coefficients = np.array([safe_correlation(predicted_fMRI[:, i], real_fMRI[:, i]) for i in range(predicted_fMRI.shape[1])])
+
+    # Check for NaNs in the result to identify voxels with undefined correlations
+    nans_in_correlations = np.isnan(correlation_coefficients).any()
+    print(f"NaNs in correlation coefficients: {nans_in_correlations}")
+
+    return correlation_coefficients

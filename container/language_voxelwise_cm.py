@@ -112,8 +112,8 @@ coef = pipeline[-1].coef_
 coef = backend.to_numpy(coef)
 print("(n_delays * n_features, n_voxels) =", coef.shape)
 
-# # Regularize coefficients
-# coef /= np.linalg.norm(coef, axis=0)[None]
+# Regularize coefficients
+coef /= np.linalg.norm(coef, axis=0)[None]
 # coef *= np.sqrt(np.maximum(0, scores))[None]
 
 # split the ridge coefficients per delays
