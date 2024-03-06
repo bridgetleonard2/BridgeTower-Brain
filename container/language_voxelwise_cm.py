@@ -6,7 +6,7 @@ from sklearn import set_config
 from functions import prep_data
 from functions import generate_leave_one_run_out
 from functions import Delayer
-from himalaya.kernel_ridge import KernelRidgeCV
+from himalaya.ridge import RidgeCV
 from himalaya.backend import set_backend
 
 # CHOOSE SUBJECT
@@ -53,17 +53,14 @@ undertheinfluence_fmri, undertheinfluence_features = prep_data(fmri_undertheinfl
 
 fmri_arrays = [ai_fmri, avatar_fmri, howtodraw_fmri, legacy_fmri,
                life_fmri, yankees_fmri, naked_fmri,
-               odetostepfather_fmri, souls_fmri]
+               odetostepfather_fmri, souls_fmri, undertheinfluence_fmri]
 feature_arrays = [ai_features, avatar_features, howtodraw_features,
                   legacy_features, life_features, yankees_features,
                   naked_features, odetostepfather_features,
-                  souls_features]
+                  souls_features, undertheinfluence_features]
 # Combine data
 Y_train = np.vstack(fmri_arrays)
 X_train = np.vstack(feature_arrays)
-
-Y_test = undertheinfluence_fmri
-X_test = undertheinfluence_features
 
 # Define cross-validation
 run_onsets = []
@@ -89,7 +86,7 @@ X_train = X_train.astype("float32")
 
 alphas = np.logspace(1, 20, 20)
 
-kernel_ridge_cv = KernelRidgeCV(
+ridge_cv = RidgeCV(
     alphas=alphas, cv=cv,
     solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
                        n_targets_batch_refit=100))
@@ -97,7 +94,7 @@ kernel_ridge_cv = KernelRidgeCV(
 pipeline = make_pipeline(
     scaler,
     delayer,
-    kernel_ridge_cv,
+    ridge_cv,
 )
 
 set_config(display='diagram')  # requires scikit-learn 0.23
@@ -105,30 +102,30 @@ pipeline
 
 _ = pipeline.fit(X_train, Y_train)
 
-# Calculate scores
-scores = pipeline.score(X_test, Y_test)
-print("(n_voxels,) =", scores.shape)
-scores = backend.to_numpy(scores)
+# # Calculate scores
+# scores = pipeline.score(X_test, Y_test)
+# print("(n_voxels,) =", scores.shape)
+# scores = backend.to_numpy(scores)
 
 best_alphas = backend.to_numpy(pipeline[-1].best_alphas_)
-primal_coef = pipeline[-1].get_primal_coef()
-primal_coef = backend.to_numpy(primal_coef)
-print("(n_delays * n_features, n_voxels) =", primal_coef.shape)
+coef = pipeline[-1].coef_
+coef = backend.to_numpy(coef)
+print("(n_delays * n_features, n_voxels) =", coef.shape)
 
-# Regularize coefficients
-primal_coef /= np.linalg.norm(primal_coef, axis=0)[None]
-primal_coef *= np.sqrt(np.maximum(0, scores))[None]
+# # Regularize coefficients
+# coef /= np.linalg.norm(coef, axis=0)[None]
+# coef *= np.sqrt(np.maximum(0, scores))[None]
 
 # split the ridge coefficients per delays
 delayer = pipeline.named_steps['delayer']
-primal_coef_per_delay = delayer.reshape_by_delays(primal_coef, axis=0)
-print("(n_delays, n_features, n_voxels) =", primal_coef_per_delay.shape)
-del primal_coef
+coef_per_delay = delayer.reshape_by_delays(coef, axis=0)
+print("(n_delays, n_features, n_voxels) =", coef_per_delay.shape)
+del coef
 
 # average over delays
-average_coef = np.mean(primal_coef_per_delay, axis=0)
+average_coef = np.mean(coef_per_delay, axis=0)
 print("(n_features, n_voxels) =", average_coef.shape)
-del primal_coef_per_delay
+del coef_per_delay
 
-np.save('results/story/' + subject + 'best_alphas.npy', best_alphas)
-np.save('results/story/' + subject + 'coefficients.npy', average_coef)
+np.save('results/story/' + subject + '_best_alphas.npy', best_alphas)
+np.save('results/story/' + subject + '_coefficients.npy', average_coef)

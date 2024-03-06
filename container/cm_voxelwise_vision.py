@@ -3,7 +3,7 @@ from sklearn.model_selection import check_cv
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn import set_config
-from functions import prep_data
+from functions import remove_nan
 from functions import generate_leave_one_run_out
 from functions import Delayer
 from himalaya.kernel_ridge import KernelRidgeCV
@@ -17,8 +17,8 @@ subject = 'S1'
 print("Load movie data")
 # Load fMRI data
 # Using all data for cross-modality encoding model
-fmri_movie_train = np.load("data/moviedata/S1/train.npy")
-fmri_movie_test = np.load("data/moviedata/S1/train.npy")
+fmri_train = np.load("data/moviedata/S1/train.npy")
+fmri_test = np.load("data/moviedata/S1/train.npy")
 
 print("Load movie features")
 # Load in movie feature vectors
@@ -34,7 +34,18 @@ train08 = np.load("data/feature_vectors/movie/train_08_data.npy")
 train09 = np.load("data/feature_vectors/movie/train_09_data.npy")
 train10 = np.load("data/feature_vectors/movie/train_10_data.npy")
 train11 = np.load("data/feature_vectors/movie/train_11_data.npy")
+test = np.load("data/feature_vectors/movie/test_data.npy")
 
-movie_features = np.vstack((train00, train01, train02, train03, train04,
-                            train05, train06, train07, train08, train09,
-                            train10, train11))
+# Prep data
+train_fmri = remove_nan(fmri_train)
+test_fmri = remove_nan(fmri_test)
+
+fmri_arrays = [train_fmri, test_fmri]
+feature_arrays = [train00, train01, train02, train03, train04,
+                  train05, train06, train07, train08, train09,
+                  train10, train11, test]
+
+# Combine data
+Y_train = np.vstack(fmri_arrays)
+X_train = np.vstack(feature_arrays)
+
