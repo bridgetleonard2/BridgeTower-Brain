@@ -28,7 +28,6 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
    - raw_stimuli: *Must download from outside repository, instructions under `Getting Started` and .md file in data directory*. Contains repositories from past experiments including `shortclips`: [a dataset created from a movie watching experiment](https://doi.gin.g-node.org/10.12751/g-node.vy1zjd/), `textgrids`: [a dataset created from a story listening experiment](https://www.nature.com/articles/s41597-023-02437-z), and `test_data` for a BridgeTower introduction.
    - fmri_data: *Must download from outside repository, instructions under `Getting Started` and .md file in data directory*. Contains the corresponding fMRI data for the shortclips and textgrids stimuli.
    - intro_data: Contains data for bridgetower_introduction (the first notebook tutorial). Uses images, videos, captions from outside datasets to investigate the architecture of BridgeTower.
-- **Models:** Houses the implementation of BridgeTower and other relevant models.
 - **Notebooks:** Jupyter notebooks detailing the step-by-step process of replication and subsequent investigations.
 - **Results:** Stores the results of experiments, visualizations, and analysis outputs.
 - **Container:** Contains a script and an Apptainer definition file to run voxelwise encoding models on an HPC server.
