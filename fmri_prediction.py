@@ -200,13 +200,87 @@ test_nan = np.load("data/fmri_data/moviedata/S1/test.npy")
 train = remove_nan(train_nan)
 test = remove_nan(test_nan)
 
-movie_fmri_arrays = [train, test]
 movie_feature_arrays = [train00_transformed, train01_transformed, train02_transformed,
-                  train03_transformed, train04_transformed, train05_transformed,
-                  train06_transformed, train07_transformed, train08_transformed,
-                  train09_transformed, train10_transformed, train11_transformed,
-                  test_transformed]
+                        train03_transformed, train04_transformed, train05_transformed,
+                        train06_transformed, train07_transformed, train08_transformed,
+                        train09_transformed, train10_transformed, train11_transformed]
 
 # Combine data
-movie_fmri = np.vstack(movie_fmri_arrays)
-movie_features = np.vstack(movie_feature_arrays)
+movie_fmri_train = train
+movie_fmri_test = test
+
+movie_features_train = np.vstack(movie_feature_arrays)
+movie_features_test = test_transformed
+
+print("Make predictions")
+movie_predictions_train = np.dot(movie_features_train, language_encoding)
+movie_predictions_test = np.dot(movie_features_test, language_encoding)
+
+print("Calculate correlations")
+movie_correlations_train = calc_correlation(movie_predictions_train, movie_fmri_train)
+movie_correlations_test = calc_correlation(movie_predictions_test, movie_fmri_test)
+
+all_correlations = np.stack((movie_correlations_train, movie_correlations_train, movie_correlations_train,
+                             movie_correlations_train, movie_correlations_train, movie_correlations_train,
+                             movie_correlations_train, movie_correlations_train, movie_correlations_train,
+                             movie_correlations_train, movie_correlations_train, movie_correlations_train,
+                             movie_correlations_test))
+
+movie_correlations = story_correlations = np.nanmean(all_correlations, axis=0)
+print("Max correlations:", np.nanmax(movie_correlations))
+
+print("Visualize results")
+# Recreate the mask used for flattening (assuming you have access to 'movie_train' or similar)
+mask = ~np.isnan(train_nan[0])  # Using the first time point as a reference for the mask
+
+# Initialize an empty 3D array with NaNs for the correlation data
+movie_reconstructed_correlations = np.full((31, 100, 100), np.nan)
+
+# Flatten the mask to get the indices of the original valid (non-NaN) data points
+valid_indices = np.where(mask.flatten())[0]
+
+# Assign the correlation coefficients to their original spatial positions
+for index, corr_value in zip(valid_indices, movie_correlations):
+    # Convert the 1D index back to 3D index in the spatial dimensions
+    z, x, y = np.unravel_index(index, (31, 100, 100))
+    movie_reconstructed_correlations[z, x, y] = corr_value
+
+movie_flattened_correlations = movie_reconstructed_correlations.flatten()
+movie_lh_vertex_correlation_data = lh_mapping_matrix.dot(movie_flattened_correlations)
+movie_rh_vertex_correlation_data = rh_mapping_matrix.dot(movie_flattened_correlations)
+
+vmin, vmax = -0.1, 0.1
+fig, axs = plt.subplots(1, 2, figsize=(7,4))
+
+# Plot the first flatmap
+sc1 = axs[0].scatter(lh_vertex_coords[:, 0], lh_vertex_coords[:, 1], c=movie_lh_vertex_correlation_data, cmap='RdBu_r', vmin=vmin, vmax=vmax, s=.02)
+axs[0].set_aspect('equal', adjustable='box')  # Ensure equal scaling
+# axs[0].set_title('Left Hemisphere')
+axs[0].set_frame_on(False)
+axs[0].set_xticks([])  # Remove x-axis ticks
+axs[0].set_yticks([])  # Remove y-axis ticks
+
+# Plot the second flatmap
+sc2 = axs[1].scatter(rh_vertex_coords[:, 0], rh_vertex_coords[:, 1], c=movie_rh_vertex_correlation_data, cmap='RdBu_r', vmin=vmin, vmax=vmax, s=.02)
+axs[1].set_aspect('equal', adjustable='box')  # Ensure equal scaling
+# axs[1].set_title('Right Hemisphere')
+axs[1].set_frame_on(False)
+axs[1].set_xticks([])  # Remove x-axis ticks
+axs[1].set_yticks([])  # Remove y-axis ticks
+
+# Adjust layout to make space for the top colorbar
+plt.subplots_adjust(top=0.85, wspace=0)
+
+# Add a single horizontal colorbar at the top
+cbar_ax = fig.add_axes([0.25, 0.9, 0.5, 0.05])  # Adjust these values as needed [left, bottom, width, height]
+cbar = fig.colorbar(sc1, cax=cbar_ax, orientation='horizontal')
+# Set the color bar to only display min and max values
+cbar.set_ticks([vmin, vmax])
+cbar.set_ticklabels([f'{vmin}', f'{vmax}'])
+
+# Remove the color bar box
+cbar.outline.set_visible(False)
+
+plt.title(r'$r_{\mathit{story \rightarrow movie}}$')
+plt.savefig('results/visuals/' + subject + 'story_movie.png', format='png')
+plt.show()
