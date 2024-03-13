@@ -448,10 +448,11 @@ def get_story_features(story_data, n=20):
 
     return data
 
+
 if __name__ == "__main__":
     if len(sys.argv) == 3: 
         data = sys.argv[1]
-        raw_stim = sys.arv[2]
+        raw_stim = sys.argv[2]
         if data == 'movie':
             features = get_movie_features("data/raw_stimuli/shortclips/stimuli/" + raw_stim + ".hdf")
         elif data == 'story':
