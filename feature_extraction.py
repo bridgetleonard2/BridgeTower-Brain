@@ -179,6 +179,9 @@ def get_movie_features(movie_data, n=30):
     for i, image in enumerate(movie_data):
 
         model_input = processor(image, "", return_tensors="pt")
+        # Assuming model_input is a dictionary of tensors
+        model_input = {key: value.to(device) for key, value in model_input.items()}
+
         _ = model(**model_input)
 
         for name, tensor in features.items():
@@ -272,21 +275,22 @@ def get_movie_features(movie_data, n=30):
     layer_13.remove()
 
     # Save data
-    np.save("results/feature_vectors/movie/layer1/" + raw_stim + "_data.npy", np.array(data['layer_1']))
-    np.save("results/feature_vectors/movie/layer2/" + raw_stim + "_data.npy", np.array(data['layer_2']))
-    np.save("results/feature_vectors/movie/layer3/" + raw_stim + "_data.npy", np.array(data['layer_3']))
-    np.save("results/feature_vectors/movie/layer4/" + raw_stim + "_data.npy", np.array(data['layer_4']))
-    np.save("results/feature_vectors/movie/layer5/" + raw_stim + "_data.npy", np.array(data['layer_5']))
-    np.save("results/feature_vectors/movie/layer6/" + raw_stim + "_data.npy", np.array(data['layer_6']))
-    np.save("results/feature_vectors/movie/layer7/" + raw_stim + "_data.npy", np.array(data['layer_7']))
-    np.save("results/feature_vectors/movie/layer8/" + raw_stim + "_data.npy", np.array(data['layer_8']))
-    np.save("results/feature_vectors/movie/layer9/" + raw_stim + "_data.npy", np.array(data['layer_9']))
-    np.save("results/feature_vectors/movie/layer10/" + raw_stim + "_data.npy", np.array(data['layer_10']))
-    np.save("results/feature_vectors/movie/layer11/" + raw_stim + "_data.npy", np.array(data['layer_11']))
-    np.save("results/feature_vectors/movie/layer12/" + raw_stim + "_data.npy", np.array(data['layer_12']))
-    np.save("results/feature_vectors/movie/layer13/" + raw_stim + "_data.npy", np.array(data['layer_13']))
+    torch.save(data['layer_1'], "results/feature_vectors/movie/layer1/" + raw_stim + "_data.pt")
+    torch.save(data['layer_2'], "results/feature_vectors/movie/layer2/" + raw_stim + "_data.pt")
+    torch.save(data['layer_3'], "results/feature_vectors/movie/layer3/" + raw_stim + "_data.pt")
+    torch.save(data['layer_4'], "results/feature_vectors/movie/layer4/" + raw_stim + "_data.pt")
+    torch.save(data['layer_5'], "results/feature_vectors/movie/layer5/" + raw_stim + "_data.pt")
+    torch.save(data['layer_6'], "results/feature_vectors/movie/layer6/" + raw_stim + "_data.pt")
+    torch.save(data['layer_7'], "results/feature_vectors/movie/layer7/" + raw_stim + "_data.pt")
+    torch.save(data['layer_8'], "results/feature_vectors/movie/layer8/" + raw_stim + "_data.pt")
+    torch.save(data['layer_9'], "results/feature_vectors/movie/layer9/" + raw_stim + "_data.pt")
+    torch.save(data['layer_10'], "results/feature_vectors/movie/layer10/" + raw_stim + "_data.pt")
+    torch.save(data['layer_11'], "results/feature_vectors/movie/layer11/" + raw_stim + "_data.pt")
+    torch.save(data['layer_12'], "results/feature_vectors/movie/layer12/" + raw_stim + "_data.pt")
+    torch.save(data['layer_13'], "results/feature_vectors/movie/layer13/" + raw_stim + "_data.pt")
 
     return data
+
 
 def get_story_features(story_data, n=20):
     """Function to extract feature vectors for each word of a story.
@@ -378,6 +382,9 @@ def get_story_features(story_data, n=20):
 
         model_input = processor(image_array, word_with_context,
                                 return_tensors="pt")
+        # Assuming model_input is a dictionary of tensors
+        model_input = {key: value.to(device) for key, value in model_input.items()}
+
         _ = model(**model_input)
 
         for name, tensor in features.items():
@@ -432,19 +439,19 @@ def get_story_features(story_data, n=20):
     layer_13.remove()
 
     # Save data
-    np.save("results/feature_vectors/story/layer1/" + raw_stim + "_data.npy", np.array(data['layer_1']))
-    np.save("results/feature_vectors/story/layer2/" + raw_stim + "_data.npy", np.array(data['layer_2']))
-    np.save("results/feature_vectors/story/layer3/" + raw_stim + "_data.npy", np.array(data['layer_3']))
-    np.save("results/feature_vectors/story/layer4/" + raw_stim + "_data.npy", np.array(data['layer_4']))
-    np.save("results/feature_vectors/story/layer5/" + raw_stim + "_data.npy", np.array(data['layer_5']))
-    np.save("results/feature_vectors/story/layer6/" + raw_stim + "_data.npy", np.array(data['layer_6']))
-    np.save("results/feature_vectors/story/layer7/" + raw_stim + "_data.npy", np.array(data['layer_7']))
-    np.save("results/feature_vectors/story/layer8/" + raw_stim + "_data.npy", np.array(data['layer_8']))
-    np.save("results/feature_vectors/story/layer9/" + raw_stim + "_data.npy", np.array(data['layer_9']))
-    np.save("results/feature_vectors/story/layer10/" + raw_stim + "_data.npy", np.array(data['layer_10']))
-    np.save("results/feature_vectors/story/layer11/" + raw_stim + "_data.npy", np.array(data['layer_11']))
-    np.save("results/feature_vectors/story/layer12/" + raw_stim + "_data.npy", np.array(data['layer_12']))
-    np.save("results/feature_vectors/story/layer13/" + raw_stim + "_data.npy", np.array(data['layer_13']))
+    torch.save(data['layer_1'], "results/feature_vectors/story/layer1/" + raw_stim + "_data.pt")
+    torch.save(data['layer_2'], "results/feature_vectors/story/layer2/" + raw_stim + "_data.pt")
+    torch.save(data['layer_3'], "results/feature_vectors/story/layer3/" + raw_stim + "_data.pt")
+    torch.save(data['layer_4'], "results/feature_vectors/story/layer4/" + raw_stim + "_data.pt")
+    torch.save(data['layer_5'], "results/feature_vectors/story/layer5/" + raw_stim + "_data.pt")
+    torch.save(data['layer_6'], "results/feature_vectors/story/layer6/" + raw_stim + "_data.pt")
+    torch.save(data['layer_7'], "results/feature_vectors/story/layer7/" + raw_stim + "_data.pt")
+    torch.save(data['layer_8'], "results/feature_vectors/story/layer8/" + raw_stim + "_data.pt")
+    torch.save(data['layer_9'], "results/feature_vectors/story/layer9/" + raw_stim + "_data.pt")
+    torch.save(data['layer_10'], "results/feature_vectors/story/layer10/" + raw_stim + "_data.pt")
+    torch.save(data['layer_11'], "results/feature_vectors/story/layer11/" + raw_stim + "_data.pt")
+    torch.save(data['layer_12'], "results/feature_vectors/story/layer12/" + raw_stim + "_data.pt")
+    torch.save(data['layer_13'], "results/feature_vectors/story/layer13/" + raw_stim + "_data.pt")
 
     return data
 
