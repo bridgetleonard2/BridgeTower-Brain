@@ -146,7 +146,7 @@ def get_movie_features(movie_data, n=30):
         get_features('layer_3'))
     layer_4 = model.vision_model.visual.ln_post.register_forward_hook(
         get_features('layer_4'))
-    layer_5 = model.text_model.encoder.layer[-1].output.register_forward_hook(
+    layer_5 = model.text_model.encoder.layer[-1].output.LayerNorm.register_forward_hook(
         get_features('layer_5'))
     layer_6 = model.cross_modal_image_layers[-1].output.register_forward_hook(
         get_features('layer_6'))
@@ -338,7 +338,7 @@ def get_story_features(story_data, n=20):
         get_features('layer_3'))
     layer_4 = model.vision_model.visual.ln_post.register_forward_hook(
         get_features('layer_4'))
-    layer_5 = model.text_model.encoder.layer[-1].output.register_forward_hook(
+    layer_5 = model.text_model.encoder.layer[-1].output.LayerNorm.register_forward_hook(
         get_features('layer_5'))
     layer_6 = model.cross_modal_image_layers[-1].output.register_forward_hook(
         get_features('layer_6'))
@@ -357,6 +357,9 @@ def get_story_features(story_data, n=20):
     layer_13 = model.cross_modal_image_link_tower[-1].register_forward_hook(
         get_features('layer_13'))
 
+    processor = BridgeTowerProcessor.from_pretrained(
+        "BridgeTower/bridgetower-base")
+    
     # Create a numpy array filled with gray values (128 in this case)
     # THis will act as tthe zero image input***
     gray_value = 128
