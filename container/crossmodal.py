@@ -10,10 +10,8 @@ from sklearn.model_selection import check_cv
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn import set_config
-from functions import remove_nan
-from functions import prep_data
-from functions import generate_leave_one_run_out
-from functions import Delayer
+from functions import remove_nan, prep_data, generate_leave_one_run_out, \
+    calc_correlation, Delayer
 from himalaya.ridge import RidgeCV
 from himalaya.backend import set_backend
 
@@ -405,10 +403,6 @@ def vision_model(subject, layer):
     train11 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_11.hdf', layer)
     test = get_movie_features('data/raw_stimuli/shortclips/stimuli/test.hdf')
 
-    # Project into cross modal space
-    # Build alignment matrix
-    coef_images_to_captions, coef_captions_to_images = alignment(layer)
-
     # Build encoding model
     print("Load movie data")
     # Load fMRI data
@@ -497,6 +491,92 @@ def vision_model(subject, layer):
     return average_coef
 
 
+def story_prediction(subject, layer, vision_encoding_matrix):
+    _, coef_captions_to_images = alignment(layer)
+    # Get story features
+    alternateithicatom = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid")
+    avatar = get_story_features("data/raw_stimuli/textgrids/stimuli/avatar.TextGrid")
+    howtodraw = get_story_features("data/raw_stimuli/textgrids/stimuli/howtodraw.TextGrid")
+    legacy = get_story_features("data/raw_stimuli/textgrids/stimuli/legacy.TextGrid")
+    life = get_story_features("data/raw_stimuli/textgrids/stimuli/life.TextGrid")
+    yankees = get_story_features("data/raw_stimuli/textgrids/stimuli/myfirstdaywiththeyankees.TextGrid")
+    naked = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid")
+    ode = get_story_features("data/raw_stimuli/textgrids/stimuli/naked.TextGrid")
+    souls = get_story_features("data/raw_stimuli/textgrids/stimuli/odetostepfather.TextGrid")
+    undertheinfluence = get_story_features("data/raw_stimuli/textgrids/stimuli/undertheinfluence.TextGrid")
+
+    # Project features into opposite space
+    alternateithicatom_transformed = np.dot(alternateithicatom, coef_captions_to_images.T)
+    avatar_transformed = np.dot(avatar, coef_captions_to_images.T)
+    howtodraw_transformed = np.dot(howtodraw, coef_captions_to_images.T)
+    legacy_transformed = np.dot(legacy, coef_captions_to_images.T)
+    life_transformed = np.dot(life, coef_captions_to_images.T)
+    yankees_transformed = np.dot(yankees, coef_captions_to_images.T)
+    naked_transformed = np.dot(naked, coef_captions_to_images.T)
+    ode_transformed = np.dot(ode, coef_captions_to_images.T)
+    souls_transformed = np.dot(souls, coef_captions_to_images.T)
+    undertheinfluence_transformed = np.dot(undertheinfluence, coef_captions_to_images.T)
+
+    # Load fmri data
+    fmri_alternateithicatom = np.load("data/storydata/" + subject + "/alternateithicatom.npy")
+    fmri_avatar = np.load("data/storydata/" + subject + "/avatar.npy")
+    fmri_howtodraw = np.load("data/storydata/" + subject + "/howtodraw.npy")
+    fmri_legacy = np.load("data/storydata/" + subject + "/legacy.npy")
+    fmri_life = np.load("data/storydata/" + subject + "/life.npy")
+    fmri_yankees = np.load("data/storydata/" + subject + "/myfirstdaywiththeyankees.npy")
+    fmri_naked = np.load("data/storydata/" + subject + "/naked.npy")
+    fmri_ode = np.load("data/storydata/" + subject + "/odetostepfather.npy")
+    fmri_souls = np.load("data/storydata/" + subject + "/souls.npy")
+    fmri_undertheinfluence = np.load("data/storydata/" + subject + "/undertheinfluence.npy")
+
+    # Prep data
+    fmri_alternateithicatom, ai_features = prep_data(fmri_alternateithicatom, alternateithicatom_transformed)
+    fmri_avatar, avatar_features = prep_data(fmri_avatar, avatar_transformed)
+    fmri_howtodraw, howtodraw_features = prep_data(fmri_howtodraw, howtodraw_transformed)
+    fmri_legacy, legacy_features = prep_data(fmri_legacy, legacy_transformed)
+    fmri_life, life_features = prep_data(fmri_life, life_transformed)
+    fmri_yankees, yankees_features = prep_data(fmri_yankees, yankees_transformed)
+    fmri_naked, naked_features = prep_data(fmri_naked, naked_transformed)
+    fmri_ode, odetostepfather_features = prep_data(fmri_ode, ode_transformed)
+    fmri_souls, souls_features = prep_data(fmri_souls, souls_transformed)
+    fmri_undertheinfluence, undertheinfluence_features = prep_data(fmri_undertheinfluence, undertheinfluence_transformed)
+
+    ai_predictions = np.dot(ai_features, vision_encoding_matrix)
+    avatar_predictions = np.dot(avatar_features, vision_encoding_matrix)
+    howtodraw_predictions = np.dot(howtodraw_features, vision_encoding_matrix)
+    legacy_predictions = np.dot(legacy_features, vision_encoding_matrix)
+    life_predictions = np.dot(life_features, vision_encoding_matrix)
+    yankees_predictions = np.dot(yankees_features, vision_encoding_matrix)
+    naked_predictions = np.dot(naked_features, vision_encoding_matrix)
+    odetostepfather_predictions = np.dot(odetostepfather_features, vision_encoding_matrix)
+    souls_predictions = np.dot(souls_features, vision_encoding_matrix)
+    undertheinfluence_predictions = np.dot(undertheinfluence_features, vision_encoding_matrix)
+
+    ai_correlations = calc_correlation(ai_predictions, fmri_alternateithicatom)
+    avatar_correlations = calc_correlation(avatar_predictions, fmri_avatar)
+    howtodraw_correlations = calc_correlation(howtodraw_predictions, fmri_howtodraw)
+    legacy_correlations = calc_correlation(legacy_predictions, fmri_legacy)
+    life_correlations = calc_correlation(life_predictions, fmri_life)
+    yankees_correlations = calc_correlation(yankees_predictions, fmri_yankees)
+    naked_correlations = calc_correlation(naked_predictions, fmri_naked)
+    odetostepfather_correlations = calc_correlation(odetostepfather_predictions, fmri_ode)
+    souls_correlations = calc_correlation(souls_predictions, fmri_souls)
+    undertheinfluence_correlations = calc_correlation(undertheinfluence_predictions, fmri_undertheinfluence)
+
+    all_correlations = np.stack((ai_correlations, avatar_correlations, howtodraw_correlations,
+                        legacy_correlations, life_correlations, yankees_correlations,
+                        naked_correlations, odetostepfather_correlations, souls_correlations,
+                        undertheinfluence_correlations))
+
+    story_correlations = np.nanmean(all_correlations, axis=0)
+    print("Max correlation:", np.nanmax(story_correlations))
+
+    return story_correlations
+
+def create_flatmap(subject, layer):
+    # Load mappers
+    
+
 if __name__ == "__main__":
     if len(sys.argv) == 4: 
         subject = sys.argv[1]
@@ -509,83 +589,14 @@ if __name__ == "__main__":
             # Build encoding model
             vision_encoding_matrix = vision_model(subject, layer)
 
-            # Get story features
-            alternateithicatom = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid")
-            avatar = get_story_features("data/raw_stimuli/textgrids/stimuli/avatar.TextGrid")
-            howtodraw = get_story_features("data/raw_stimuli/textgrids/stimuli/howtodraw.TextGrid")
-            legacy = get_story_features("data/raw_stimuli/textgrids/stimuli/legacy.TextGrid")
-            life = get_story_features("data/raw_stimuli/textgrids/stimuli/life.TextGrid")
-            yankees = get_story_features("data/raw_stimuli/textgrids/stimuli/myfirstdaywiththeyankees.TextGrid")
-            naked = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid")
-            ode = get_story_features("data/raw_stimuli/textgrids/stimuli/naked.TextGrid")
-            souls = get_story_features("data/raw_stimuli/textgrids/stimuli/odetostepfather.TextGrid")
-            undertheinfluence = get_story_features("data/raw_stimuli/textgrids/stimuli/undertheinfluence.TextGrid")
+            # Predict story fmri with vision model
+            correlations = story_prediction(subject, layer, vision_encoding_matrix)
 
-            # Project features into opposite space
-            alternateithicatom_transformed = np.dot(alternateithicatom, coef_captions_to_images.T)
-            avatar_transformed = np.dot(avatar, coef_captions_to_images.T)
-            howtodraw_transformed = np.dot(howtodraw, coef_captions_to_images.T)
-            legacy_transformed = np.dot(legacy, coef_captions_to_images.T)
-            life_transformed = np.dot(life, coef_captions_to_images.T)
-            yankees_transformed = np.dot(yankees, coef_captions_to_images.T)
-            naked_transformed = np.dot(naked, coef_captions_to_images.T)
-            ode_transformed = np.dot(ode, coef_captions_to_images.T)
-            souls_transformed = np.dot(souls, coef_captions_to_images.T)
-            undertheinfluence_transformed = np.dot(undertheinfluence, coef_captions_to_images.T)
+            np.save(correlations, 'results/movie_to_story/' + subject + '/layer' + layer + '_correlations.npy')
 
-            # Load fmri data
-            fmri_alternateithicatom = np.load("data/storydata/" + subject + "/alternateithicatom.npy")
-            fmri_avatar = np.load("data/storydata/" + subject + "/avatar.npy")
-            fmri_howtodraw = np.load("data/storydata/" + subject + "/howtodraw.npy")
-            fmri_legacy = np.load("data/storydata/" + subject + "/legacy.npy")
-            fmri_life = np.load("data/storydata/" + subject + "/life.npy")
-            fmri_yankees = np.load("data/storydata/" + subject + "/myfirstdaywiththeyankees.npy")
-            fmri_naked = np.load("data/storydata/" + subject + "/naked.npy")
-            fmri_ode = np.load("data/storydata/" + subject + "/odetostepfather.npy")
-            fmri_souls = np.load("data/storydata/" + subject + "/souls.npy")
-            fmri_undertheinfluence = np.load("data/storydata/" + subject + "/undertheinfluence.npy")
+            # Create visualization
 
-            # Prep data
-            fmri_alternateithicatom, ai_features = prep_data(fmri_alternateithicatom, alternateithicatom_transformed)
-            fmri_avatar, avatar_features = prep_data(fmri_avatar, avatar_transformed)
-            fmri_howtodraw, howtodraw_features = prep_data(fmri_howtodraw, howtodraw_transformed)
-            fmri_legacy, legacy_features = prep_data(fmri_legacy, legacy_transformed)
-            fmri_life, life_features = prep_data(fmri_life, life_transformed)
-            fmri_yankees, yankees_features = prep_data(fmri_yankees, yankees_transformed)
-            fmri_naked, naked_features = prep_data(fmri_naked, naked_transformed)
-            fmri_ode, odetostepfather_features = prep_data(fmri_ode, ode_transformed)
-            fmri_souls, souls_features = prep_data(fmri_souls, souls_transformed)
-            fmri_undertheinfluence, undertheinfluence_features = prep_data(fmri_undertheinfluence, undertheinfluence_transformed)
-
-            ai_predictions = np.dot(ai_features, vision_encoding_matrix)
-            avatar_predictions = np.dot(avatar_features, vision_encoding_matrix)
-            howtodraw_predictions = np.dot(howtodraw_features, vision_encoding_matrix)
-            legacy_predictions = np.dot(legacy_features, vision_encoding_matrix)
-            life_predictions = np.dot(life_features, vision_encoding_matrix)
-            yankees_predictions = np.dot(yankees_features, vision_encoding_matrix)
-            naked_predictions = np.dot(naked_features, vision_encoding_matrix)
-            odetostepfather_predictions = np.dot(odetostepfather_features, vision_encoding_matrix)
-            souls_predictions = np.dot(souls_features, vision_encoding_matrix)
-            undertheinfluence_predictions = np.dot(undertheinfluence_features, vision_encoding_matrix)
-
-            ai_correlations = calc_correlation(ai_predictions, fmri_alternateithicatom)
-            avatar_correlations = calc_correlation(avatar_predictions, fmri_avatar)
-            howtodraw_correlations = calc_correlation(howtodraw_predictions, fmri_howtodraw)
-            legacy_correlations = calc_correlation(legacy_predictions, fmri_legacy)
-            life_correlations = calc_correlation(life_predictions, fmri_life)
-            yankees_correlations = calc_correlation(yankees_predictions, fmri_yankees)
-            naked_correlations = calc_correlation(naked_predictions, fmri_naked)
-            odetostepfather_correlations = calc_correlation(odetostepfather_predictions, fmri_ode)
-            souls_correlations = calc_correlation(souls_predictions, fmri_souls)
-            undertheinfluence_correlations = calc_correlation(undertheinfluence_predictions, fmri_undertheinfluence)
-
-            all_correlations = np.stack((ai_correlations, avatar_correlations, howtodraw_correlations,
-                             legacy_correlations, life_correlations, yankees_correlations,
-                             naked_correlations, odetostepfather_correlations, souls_correlations,
-                             undertheinfluence_correlations))
-
-            story_correlations = np.nanmean(all_correlations, axis=0)
-            print("Max correlation:", np.nanmax(story_correlations))
+            
 
     else:
         print("This script requires exactly two arguments: subject, modality, and layer. \
