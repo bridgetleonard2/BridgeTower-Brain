@@ -17,6 +17,7 @@ from functions import Delayer
 from himalaya.ridge import RidgeCV
 from himalaya.backend import set_backend
 
+
 # Helper functions
 def load_hdf5_array(file_name, key=None, slice=slice(0, None)):
     """Function to load data from an hdf file.
@@ -149,8 +150,8 @@ def setup_model(layer):
 
     processor = BridgeTowerProcessor.from_pretrained(
         "BridgeTower/bridgetower-base")
-    
-    return model, processor, features, layer_selected
+
+    return device, model, processor, features, layer_selected
 
 
 # Main functions
@@ -179,7 +180,7 @@ def get_movie_features(movie_data, layer, n=30):
     print("Running movie through model")
 
     # Define Model
-    model, processor, features, layer_selected = setup_model(layer)
+    device, model, processor, features, layer_selected = setup_model(layer)
 
     # create overall data structure for average feature vectors
     # a dictionary with layer names as keys and a list of vectors as it values
@@ -251,13 +252,82 @@ def get_movie_features(movie_data, layer, n=30):
     return data
 
 
+def get_story_features(story_data, layer, n=20):
+    """Function to extract feature vectors for each word of a story.
+
+    Parameters
+    ----------
+    story_data: Array
+        An array containing each word of the story in order.
+    n (optional): int
+        Number of words to to pad the target word with for
+        context (before and after).
+
+    Returns
+    -------
+    data : Dictionary
+        Dictionary where keys are the model layer from which activations are
+        extracted. Values are lists representing activations of 768 dimensions
+        over the course of each word in the story.
+    """
+    print("loading textgrid")
+    story_data = textgrid_to_array(story_data)
+
+    print("Running story through model")
+    # Define Model
+    device, model, processor, features, layer_selected = setup_model(layer)
+
+    # Create a numpy array filled with gray values (128 in this case)
+    # THis will act as tthe zero image input***
+    gray_value = 128
+    image_array = np.full((512, 512, 3), gray_value, dtype=np.uint8)
+
+    # create overall data structure for average feature vectors
+    # a dictionary with layer names as keys and a list of vectors as it values
+    data = {}
+
+    # loop through all inputs
+    for i, word in enumerate(story_data):
+        # if one of first 20 words, just pad with all the words before it
+        if i < n:
+            # collapse list of strings into a single one
+            word_with_context = ' '.join(story_data[:(i+n)])
+        # if one of last 20 words, just pad with all the words after it
+        elif i > (len(story_data) - n):
+            # collapse list of strings into a single one
+            word_with_context = ' '.join(story_data[(i-n):])
+            # collapse list of strings into a single one
+        else:
+            word_with_context = ' '.join(story_data[(i-n):(i+n)])
+
+        model_input = processor(image_array, word_with_context,
+                                return_tensors="pt")
+        # Assuming model_input is a dictionary of tensors
+        model_input = {key: value.to(device) for key, value in model_input.items()}
+
+        _ = model(**model_input)
+
+        for name, tensor in features.items():
+            if name not in data:
+                data[name] = []
+            data[name].append(tensor)
+
+    layer_selected.remove()
+
+    # Save data
+    data = data[f'layer_{layer}'].cpu()
+    data = data.numpy()
+
+    return data
+
+
 def alignment(layer):
     dataset = load_dataset("nlphuji/flickr30k")
     test_dataset = dataset['test']
 
     # Define Model
-    model, processor, features, layer_selected = setup_model(layer)
-    
+    device, model, processor, features, layer_selected = setup_model(layer)
+
     data = []
 
     for item in range(len(test_dataset)):
@@ -433,6 +503,89 @@ if __name__ == "__main__":
         modality = sys.argv[2]
         layer = sys.argv[3]
 
+        coef_images_to_captions, coef_captions_to_images = alignment(layer)
+
+        if modality == "vision":
+            # Build encoding model
+            vision_encoding_matrix = vision_model(subject, layer)
+
+            # Get story features
+            alternateithicatom = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid")
+            avatar = get_story_features("data/raw_stimuli/textgrids/stimuli/avatar.TextGrid")
+            howtodraw = get_story_features("data/raw_stimuli/textgrids/stimuli/howtodraw.TextGrid")
+            legacy = get_story_features("data/raw_stimuli/textgrids/stimuli/legacy.TextGrid")
+            life = get_story_features("data/raw_stimuli/textgrids/stimuli/life.TextGrid")
+            yankees = get_story_features("data/raw_stimuli/textgrids/stimuli/myfirstdaywiththeyankees.TextGrid")
+            naked = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid")
+            ode = get_story_features("data/raw_stimuli/textgrids/stimuli/naked.TextGrid")
+            souls = get_story_features("data/raw_stimuli/textgrids/stimuli/odetostepfather.TextGrid")
+            undertheinfluence = get_story_features("data/raw_stimuli/textgrids/stimuli/undertheinfluence.TextGrid")
+
+            # Project features into opposite space
+            alternateithicatom_transformed = np.dot(alternateithicatom, coef_captions_to_images.T)
+            avatar_transformed = np.dot(avatar, coef_captions_to_images.T)
+            howtodraw_transformed = np.dot(howtodraw, coef_captions_to_images.T)
+            legacy_transformed = np.dot(legacy, coef_captions_to_images.T)
+            life_transformed = np.dot(life, coef_captions_to_images.T)
+            yankees_transformed = np.dot(yankees, coef_captions_to_images.T)
+            naked_transformed = np.dot(naked, coef_captions_to_images.T)
+            ode_transformed = np.dot(ode, coef_captions_to_images.T)
+            souls_transformed = np.dot(souls, coef_captions_to_images.T)
+            undertheinfluence_transformed = np.dot(undertheinfluence, coef_captions_to_images.T)
+
+            # Load fmri data
+            fmri_alternateithicatom = np.load("data/storydata/" + subject + "/alternateithicatom.npy")
+            fmri_avatar = np.load("data/storydata/" + subject + "/avatar.npy")
+            fmri_howtodraw = np.load("data/storydata/" + subject + "/howtodraw.npy")
+            fmri_legacy = np.load("data/storydata/" + subject + "/legacy.npy")
+            fmri_life = np.load("data/storydata/" + subject + "/life.npy")
+            fmri_yankees = np.load("data/storydata/" + subject + "/myfirstdaywiththeyankees.npy")
+            fmri_naked = np.load("data/storydata/" + subject + "/naked.npy")
+            fmri_ode = np.load("data/storydata/" + subject + "/odetostepfather.npy")
+            fmri_souls = np.load("data/storydata/" + subject + "/souls.npy")
+            fmri_undertheinfluence = np.load("data/storydata/" + subject + "/undertheinfluence.npy")
+
+            # Prep data
+            fmri_alternateithicatom, ai_features = prep_data(fmri_alternateithicatom, alternateithicatom_transformed)
+            fmri_avatar, avatar_features = prep_data(fmri_avatar, avatar_transformed)
+            fmri_howtodraw, howtodraw_features = prep_data(fmri_howtodraw, howtodraw_transformed)
+            fmri_legacy, legacy_features = prep_data(fmri_legacy, legacy_transformed)
+            fmri_life, life_features = prep_data(fmri_life, life_transformed)
+            fmri_yankees, yankees_features = prep_data(fmri_yankees, yankees_transformed)
+            fmri_naked, naked_features = prep_data(fmri_naked, naked_transformed)
+            fmri_ode, odetostepfather_features = prep_data(fmri_ode, ode_transformed)
+            fmri_souls, souls_features = prep_data(fmri_souls, souls_transformed)
+            fmri_undertheinfluence, undertheinfluence_features = prep_data(fmri_undertheinfluence, undertheinfluence_transformed)
+
+            ai_predictions = np.dot(ai_features, vision_encoding_matrix)
+            avatar_predictions = np.dot(avatar_features, vision_encoding_matrix)
+            howtodraw_predictions = np.dot(howtodraw_features, vision_encoding_matrix)
+            legacy_predictions = np.dot(legacy_features, vision_encoding_matrix)
+            life_predictions = np.dot(life_features, vision_encoding_matrix)
+            yankees_predictions = np.dot(yankees_features, vision_encoding_matrix)
+            naked_predictions = np.dot(naked_features, vision_encoding_matrix)
+            odetostepfather_predictions = np.dot(odetostepfather_features, vision_encoding_matrix)
+            souls_predictions = np.dot(souls_features, vision_encoding_matrix)
+            undertheinfluence_predictions = np.dot(undertheinfluence_features, vision_encoding_matrix)
+
+            ai_correlations = calc_correlation(ai_predictions, fmri_alternateithicatom)
+            avatar_correlations = calc_correlation(avatar_predictions, fmri_avatar)
+            howtodraw_correlations = calc_correlation(howtodraw_predictions, fmri_howtodraw)
+            legacy_correlations = calc_correlation(legacy_predictions, fmri_legacy)
+            life_correlations = calc_correlation(life_predictions, fmri_life)
+            yankees_correlations = calc_correlation(yankees_predictions, fmri_yankees)
+            naked_correlations = calc_correlation(naked_predictions, fmri_naked)
+            odetostepfather_correlations = calc_correlation(odetostepfather_predictions, fmri_ode)
+            souls_correlations = calc_correlation(souls_predictions, fmri_souls)
+            undertheinfluence_correlations = calc_correlation(undertheinfluence_predictions, fmri_undertheinfluence)
+
+            all_correlations = np.stack((ai_correlations, avatar_correlations, howtodraw_correlations,
+                             legacy_correlations, life_correlations, yankees_correlations,
+                             naked_correlations, odetostepfather_correlations, souls_correlations,
+                             undertheinfluence_correlations))
+
+            story_correlations = np.nanmean(all_correlations, axis=0)
+            print("Max correlation:", np.nanmax(story_correlations))
 
     else:
         print("This script requires exactly two arguments: subject, modality, and layer. \
