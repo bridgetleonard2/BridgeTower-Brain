@@ -971,16 +971,16 @@ def create_flatmap(subject, layer, correlations, modality):
     flattened_correlations = reconstructed_correlations.flatten()
 
     # Load mappers
-    lh_mapping_matrix = load_npz("data/fmri_data/mappers/" + subject +
+    lh_mapping_matrix = load_npz("data/mappers/" + subject +
                                  "_listening_forVL_lh.npz")
     lh_vertex_correlation_data = lh_mapping_matrix.dot(flattened_correlations)
-    lh_vertex_coords = np.load("data/fmri_data/mappers/" + subject +
+    lh_vertex_coords = np.load("data/mappers/" + subject +
                                "_vertex_coords_lh.npy")
 
-    rh_mapping_matrix = load_npz("data/fmri_data/mappers/" + subject +
+    rh_mapping_matrix = load_npz("data/mappers/" + subject +
                                  "_listening_forVL_rh.npz")
     rh_vertex_correlation_data = rh_mapping_matrix.dot(flattened_correlations)
-    rh_vertex_coords = np.load("data/fmri_data/mappers/" + subject +
+    rh_vertex_coords = np.load("data/mappers/" + subject +
                                "_vertex_coords_rh.npy")
 
     vmin, vmax = -0.1, 0.1

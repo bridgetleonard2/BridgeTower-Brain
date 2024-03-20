@@ -4,6 +4,7 @@ from sklearn.utils.validation import check_random_state
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted, check_array
 
+
 # Loading data
 def remove_nan(data):
     mask = ~np.isnan(data)
@@ -93,7 +94,7 @@ def safe_correlation(x, y):
     # Numerator: sum of the product of mean-centered variables
     numerator = np.sum(x_mean * y_mean)
 
-    # Denominator: sqrt of the product of the sums of squared mean-centered variables
+    # Denominator: sqrt of product of sums of squared mean-centered variables
     denominator = np.sqrt(np.sum(x_mean**2) * np.sum(y_mean**2))
 
     # Safe division
@@ -106,13 +107,17 @@ def safe_correlation(x, y):
 
 def calc_correlation(predicted_fMRI, real_fMRI):
     # Calculate correlations for each voxel
-    correlation_coefficients = np.array([safe_correlation(predicted_fMRI[:, i], real_fMRI[:, i]) for i in range(predicted_fMRI.shape[1])])
+    correlation_coefficients = [safe_correlation(predicted_fMRI[:, i],
+                                                 real_fMRI[:, i]) for i in
+                                range(predicted_fMRI.shape[1])]
+    correlation_coefficients = np.array(correlation_coefficients)
 
-    # Check for NaNs in the result to identify voxels with undefined correlations
+    # Check for NaNs in the result
     nans_in_correlations = np.isnan(correlation_coefficients).any()
     print(f"NaNs in correlation coefficients: {nans_in_correlations}")
 
     return correlation_coefficients
+
 
 class Delayer(BaseEstimator, TransformerMixin):
     """Scikit-learn Transformer to add delays to features.
