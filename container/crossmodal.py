@@ -1,20 +1,32 @@
-from transformers import BridgeTowerModel, BridgeTowerProcessor
-import torch
+# Basics
 import numpy as np
-from torch.nn.functional import pad
 import sys
-import h5py
 import re
+from scipy.sparse import load_npz
+
+# Data loading
+import torch
+from torch.nn.functional import pad
+import h5py
 from datasets import load_dataset
+from scipy.sparse import load_npz
+
+# Ridge regression
+from himalaya.ridge import RidgeCV
+from himalaya.backend import set_backend
 from sklearn.model_selection import check_cv
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 from sklearn import set_config
+
+# Model
+from transformers import BridgeTowerModel, BridgeTowerProcessor
+
+# Specialized functions
 from functions import remove_nan, prep_data, generate_leave_one_run_out, \
     calc_correlation, Delayer
-from himalaya.ridge import RidgeCV
-from himalaya.backend import set_backend
-from scipy.sparse import load_npz
+
+# Visualization
 import matplotlib.pyplot as plt
 
 
