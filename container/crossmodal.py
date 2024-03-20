@@ -389,7 +389,6 @@ def alignment(layer):
 
 
 def vision_model(subject, layer):
-
     # Extract features from raw stimuli
     train00 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_00.hdf', layer)
     train01 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_01.hdf', layer)
@@ -403,7 +402,7 @@ def vision_model(subject, layer):
     train09 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_09.hdf', layer)
     train10 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_10.hdf', layer)
     train11 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_11.hdf', layer)
-    test = get_movie_features('data/raw_stimuli/shortclips/stimuli/test.hdf')
+    test = get_movie_features('data/raw_stimuli/shortclips/stimuli/test.hdf', layer)
 
     # Build encoding model
     print("Load movie data")
@@ -493,19 +492,139 @@ def vision_model(subject, layer):
     return average_coef
 
 
+def language_model(subject, layer):
+    # Extract features from raw stimuli
+    alternateithicatom = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid", layer)
+    avatar = get_story_features("data/raw_stimuli/textgrids/stimuli/avatar.TextGrid", layer)
+    howtodraw = get_story_features("data/raw_stimuli/textgrids/stimuli/howtodraw.TextGrid", layer)
+    legacy = get_story_features("data/raw_stimuli/textgrids/stimuli/legacy.TextGrid", layer)
+    life = get_story_features("data/raw_stimuli/textgrids/stimuli/life.TextGrid", layer)
+    yankees = get_story_features("data/raw_stimuli/textgrids/stimuli/myfirstdaywiththeyankees.TextGrid", layer)
+    naked = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid", layer)
+    ode = get_story_features("data/raw_stimuli/textgrids/stimuli/naked.TextGrid", layer)
+    souls = get_story_features("data/raw_stimuli/textgrids/stimuli/odetostepfather.TextGrid", layer)
+    undertheinfluence = get_story_features("data/raw_stimuli/textgrids/stimuli/undertheinfluence.TextGrid", layer)
+
+    # Build encoding model
+    print("Load movie data")
+    # Load fmri data
+    # Using all data for cross-modality encoding model
+    fmri_alternateithicatom = np.load("data/storydata/" + subject + "/alternateithicatom.npy")
+    fmri_avatar = np.load("data/storydata/" + subject + "/avatar.npy")
+    fmri_howtodraw = np.load("data/storydata/" + subject + "/howtodraw.npy")
+    fmri_legacy = np.load("data/storydata/" + subject + "/legacy.npy")
+    fmri_life = np.load("data/storydata/" + subject + "/life.npy")
+    fmri_yankees = np.load("data/storydata/" + subject + "/myfirstdaywiththeyankees.npy")
+    fmri_naked = np.load("data/storydata/" + subject + "/naked.npy")
+    fmri_ode = np.load("data/storydata/" + subject + "/odetostepfather.npy")
+    fmri_souls = np.load("data/storydata/" + subject + "/souls.npy")
+    fmri_undertheinfluence = np.load("data/storydata/" + subject + "/undertheinfluence.npy")
+
+    # Prep data
+    fmri_alternateithicatom, ai_features = prep_data(fmri_alternateithicatom, alternateithicatom)
+    fmri_avatar, avatar_features = prep_data(fmri_avatar, avatar)
+    fmri_howtodraw, howtodraw_features = prep_data(fmri_howtodraw, howtodraw)
+    fmri_legacy, legacy_features = prep_data(fmri_legacy, legacy)
+    fmri_life, life_features = prep_data(fmri_life, life)
+    fmri_yankees, yankees_features = prep_data(fmri_yankees, yankees)
+    fmri_naked, naked_features = prep_data(fmri_naked, naked)
+    fmri_ode, odetostepfather_features = prep_data(fmri_ode, ode)
+    fmri_souls, souls_features = prep_data(fmri_souls, souls)
+    fmri_undertheinfluence, undertheinfluence_features = prep_data(fmri_undertheinfluence, undertheinfluence)
+
+    fmri_arrays = [fmri_alternateithicatom, fmri_avatar, fmri_howtodraw,
+                   fmri_legacy, fmri_life, fmri_yankees, fmri_naked,
+                   fmri_ode, fmri_souls, fmri_undertheinfluence]
+    feature_arrays = [ai_features, avatar_features, howtodraw_features,
+                      legacy_features, life_features, yankees_features,
+                      naked_features, odetostepfather_features,
+                      souls_features, undertheinfluence_features]
+    # Combine data
+    Y_train = np.vstack(fmri_arrays)
+    X_train = np.vstack(feature_arrays)
+
+    # Define cross-validation
+    run_onsets = []
+    current_index = 0
+    for arr in feature_arrays:
+        next_index = current_index + arr.shape[0]
+        run_onsets.append(current_index)
+        current_index = next_index
+
+    n_samples_train = X_train.shape[0]
+    cv = generate_leave_one_run_out(n_samples_train, run_onsets)
+    cv = check_cv(cv)  # copy the cross-validation splitter into a reusable list
+
+    # Define the model
+    scaler = StandardScaler(with_mean=True, with_std=False)
+
+    delayer = Delayer(delays=[1, 2, 3, 4])
+
+    backend = set_backend("torch_cuda", on_error="warn")
+    print(backend)
+
+    X_train = X_train.astype("float32")
+
+    alphas = np.logspace(1, 20, 20)
+
+    ridge_cv = RidgeCV(
+        alphas=alphas, cv=cv,
+        solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
+                        n_targets_batch_refit=100))
+
+    pipeline = make_pipeline(
+        scaler,
+        delayer,
+        ridge_cv,
+    )
+
+    set_config(display='diagram')  # requires scikit-learn 0.23
+    pipeline
+
+    _ = pipeline.fit(X_train, Y_train)
+
+    # # Calculate scores
+    # scores = pipeline.score(X_test, Y_test)
+    # print("(n_voxels,) =", scores.shape)
+    # scores = backend.to_numpy(scores)
+
+    # best_alphas = backend.to_numpy(pipeline[-1].best_alphas_)
+    coef = pipeline[-1].coef_
+    coef = backend.to_numpy(coef)
+    print("(n_delays * n_features, n_voxels) =", coef.shape)
+
+    # Regularize coefficients
+    coef /= np.linalg.norm(coef, axis=0)[None]
+    # coef *= np.sqrt(np.maximum(0, scores))[None]
+
+    # split the ridge coefficients per delays
+    delayer = pipeline.named_steps['delayer']
+    coef_per_delay = delayer.reshape_by_delays(coef, axis=0)
+    print("(n_delays, n_features, n_voxels) =", coef_per_delay.shape)
+    del coef
+
+    # average over delays
+    average_coef = np.mean(coef_per_delay, axis=0)
+    print("(n_features, n_voxels) =", average_coef.shape)
+    del coef_per_delay
+
+    return average_coef
+
+
 def story_prediction(subject, layer, vision_encoding_matrix):
     _, coef_captions_to_images = alignment(layer)
+
     # Get story features
-    alternateithicatom = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid")
-    avatar = get_story_features("data/raw_stimuli/textgrids/stimuli/avatar.TextGrid")
-    howtodraw = get_story_features("data/raw_stimuli/textgrids/stimuli/howtodraw.TextGrid")
-    legacy = get_story_features("data/raw_stimuli/textgrids/stimuli/legacy.TextGrid")
-    life = get_story_features("data/raw_stimuli/textgrids/stimuli/life.TextGrid")
-    yankees = get_story_features("data/raw_stimuli/textgrids/stimuli/myfirstdaywiththeyankees.TextGrid")
-    naked = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid")
-    ode = get_story_features("data/raw_stimuli/textgrids/stimuli/naked.TextGrid")
-    souls = get_story_features("data/raw_stimuli/textgrids/stimuli/odetostepfather.TextGrid")
-    undertheinfluence = get_story_features("data/raw_stimuli/textgrids/stimuli/undertheinfluence.TextGrid")
+    alternateithicatom = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid", layer)
+    avatar = get_story_features("data/raw_stimuli/textgrids/stimuli/avatar.TextGrid", layer)
+    howtodraw = get_story_features("data/raw_stimuli/textgrids/stimuli/howtodraw.TextGrid", layer)
+    legacy = get_story_features("data/raw_stimuli/textgrids/stimuli/legacy.TextGrid", layer)
+    life = get_story_features("data/raw_stimuli/textgrids/stimuli/life.TextGrid", layer)
+    yankees = get_story_features("data/raw_stimuli/textgrids/stimuli/myfirstdaywiththeyankees.TextGrid", layer)
+    naked = get_story_features("data/raw_stimuli/textgrids/stimuli/alternateithicatom.TextGrid", layer)
+    ode = get_story_features("data/raw_stimuli/textgrids/stimuli/naked.TextGrid", layer)
+    souls = get_story_features("data/raw_stimuli/textgrids/stimuli/odetostepfather.TextGrid", layer)
+    undertheinfluence = get_story_features("data/raw_stimuli/textgrids/stimuli/undertheinfluence.TextGrid", layer)
 
     # Project features into opposite space
     alternateithicatom_transformed = np.dot(alternateithicatom, coef_captions_to_images.T)
@@ -543,6 +662,7 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     fmri_souls, souls_features = prep_data(fmri_souls, souls_transformed)
     fmri_undertheinfluence, undertheinfluence_features = prep_data(fmri_undertheinfluence, undertheinfluence_transformed)
 
+    # Make fmri predictions
     ai_predictions = np.dot(ai_features, vision_encoding_matrix)
     avatar_predictions = np.dot(avatar_features, vision_encoding_matrix)
     howtodraw_predictions = np.dot(howtodraw_features, vision_encoding_matrix)
@@ -554,6 +674,7 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     souls_predictions = np.dot(souls_features, vision_encoding_matrix)
     undertheinfluence_predictions = np.dot(undertheinfluence_features, vision_encoding_matrix)
 
+    # Calculate correlations
     ai_correlations = calc_correlation(ai_predictions, fmri_alternateithicatom)
     avatar_correlations = calc_correlation(avatar_predictions, fmri_avatar)
     howtodraw_correlations = calc_correlation(howtodraw_predictions, fmri_howtodraw)
@@ -565,6 +686,7 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     souls_correlations = calc_correlation(souls_predictions, fmri_souls)
     undertheinfluence_correlations = calc_correlation(undertheinfluence_predictions, fmri_undertheinfluence)
 
+    # Get mean correlation
     all_correlations = np.stack((ai_correlations, avatar_correlations, howtodraw_correlations,
                         legacy_correlations, life_correlations, yankees_correlations,
                         naked_correlations, odetostepfather_correlations, souls_correlations,
@@ -574,6 +696,75 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     print("Max correlation:", np.nanmax(story_correlations))
 
     return story_correlations
+
+def movie_predictions(subject, layer, language_encoding_model):
+    coef_images_to_captions, _ = alignment(layer)
+
+    # Get movie features
+    train00 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_00.hdf', layer)
+    train01 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_01.hdf', layer)
+    train02 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_02.hdf', layer)
+    train03 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_03.hdf', layer)
+    train04 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_04.hdf', layer)
+    train05 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_05.hdf', layer)
+    train06 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_06.hdf', layer)
+    train07 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_07.hdf', layer)
+    train08 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_08.hdf', layer)
+    train09 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_09.hdf', layer)
+    train10 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_10.hdf', layer)
+    train11 = get_movie_features('data/raw_stimuli/shortclips/stimuli/train_11.hdf', layer)
+    test = get_movie_features('data/raw_stimuli/shortclips/stimuli/test.hdf', layer)
+
+    # Project features into opposite space
+    test_transformed = np.dot(test, coef_images_to_captions.T)  # Check if necessary to T
+    train00_transformed = np.dot(train00, coef_images_to_captions.T)
+    train01_transformed = np.dot(train01, coef_images_to_captions.T)
+    train02_transformed = np.dot(train02, coef_images_to_captions.T)
+    train03_transformed = np.dot(train03, coef_images_to_captions.T)
+    train04_transformed = np.dot(train04, coef_images_to_captions.T)
+    train05_transformed = np.dot(train05, coef_images_to_captions.T)
+    train06_transformed = np.dot(train06, coef_images_to_captions.T)
+    train07_transformed = np.dot(train07, coef_images_to_captions.T)
+    train08_transformed = np.dot(train08, coef_images_to_captions.T)
+    train09_transformed = np.dot(train09, coef_images_to_captions.T)
+    train10_transformed = np.dot(train10, coef_images_to_captions.T)
+    train11_transformed = np.dot(train11, coef_images_to_captions.T)
+
+    # Load fmri data
+    fmri_train = np.load("data/moviedata/" + subject + "/train.npy")
+    fmri_test = np.load("data/moviedata/" + subject + "/test.npy")
+
+    # Prep data
+    fmri_train = remove_nan(fmri_train)
+    fmri_test = remove_nan(fmri_test)
+
+    # Make fmri predictions
+    feature_arrays = [train00_transformed, train01_transformed, train02_transformed,
+                      train03_transformed, train04_transformed, train05_transformed,
+                      train06_transformed, train07_transformed, train08_transformed,
+                      train09_transformed, train10_transformed, train11_transformed]
+
+    features_train = np.vstack(feature_arrays)
+    features_test = test_transformed
+
+    predictions_train = np.dot(features_train, language_encoding_model)
+    predictions_test = np.dot(features_test, language_encoding_model)
+
+    # Calculate correlations
+    correlations_train = calc_correlation(predictions_train, fmri_train)
+    correlations_test = calc_correlation(predictions_test, fmri_test)
+
+    # Get mean correlation
+    all_correlations = np.stack((correlations_train, correlations_train, correlations_train,
+                                 correlations_train, correlations_train, correlations_train,
+                                 correlations_train, correlations_train, correlations_train,
+                                 correlations_train, correlations_train, correlations_train,
+                                 correlations_test))
+
+    correlations = np.nanmean(all_correlations, axis=0)
+
+    return correlations
+
 
 def create_flatmap(subject, layer, correlations, modality):
     # Reverse flattening and masking
@@ -650,8 +841,6 @@ if __name__ == "__main__":
         modality = sys.argv[2]
         layer = sys.argv[3]
 
-        coef_images_to_captions, coef_captions_to_images = alignment(layer)
-
         if modality == "vision":
             # Build encoding model
             vision_encoding_matrix = vision_model(subject, layer)
@@ -664,10 +853,16 @@ if __name__ == "__main__":
             # Create visualization
             create_flatmap(subject, layer, correlations, modality)
         elif modality == "language":
-            
-            
+            # Build encoding model
+            language_encoding_model = language_model(subject, layer)
 
+            # Predict story fmri with language model
+            correlations = movie_predictions(subject, layer, language_encoding_model)
+
+            np.save(correlations, 'results/story_to_movie/' + subject + '/layer' + layer + '_correlations.npy')
+
+            # Create visualization
+            create_flatmap(subject, layer, correlations, modality)
     else:
         print("This script requires exactly two arguments: subject, modality, and layer. \
               Ex. python crossmodal.py S1 vision 1")
-        
