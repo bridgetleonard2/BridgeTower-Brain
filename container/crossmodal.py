@@ -14,6 +14,8 @@ from functions import remove_nan, prep_data, generate_leave_one_run_out, \
     calc_correlation, Delayer
 from himalaya.ridge import RidgeCV
 from himalaya.backend import set_backend
+from scipy.sparse import load_npz
+import matplotlib.pyplot as plt
 
 
 # Helper functions
@@ -573,9 +575,74 @@ def story_prediction(subject, layer, vision_encoding_matrix):
 
     return story_correlations
 
-def create_flatmap(subject, layer):
+def create_flatmap(subject, layer, correlations, modality):
+    # Reverse flattening and masking
+    fmri_alternateithicatom = np.load("data/storydata/" + subject + "/alternateithicatom.npy")
+
+    mask = ~np.isnan(fmri_alternateithicatom[0])  # Using the first time point as a reference for the mask
+    # Initialize an empty 3D array with NaNs for the correlation data
+    reconstructed_correlations = np.full((31, 100, 100), np.nan)
+
+    # Flatten the mask to get the indices of the original valid (non-NaN) data points
+    valid_indices = np.where(mask.flatten())[0]
+
+    # Assign the correlation coefficients to their original spatial positions
+    for index, corr_value in zip(valid_indices, correlations):
+        # Convert the 1D index back to 3D index in the spatial dimensions
+        z, x, y = np.unravel_index(index, (31, 100, 100))
+        reconstructed_correlations[z, x, y] = corr_value
+
+    flattened_correlations = reconstructed_correlations.flatten()
+
     # Load mappers
-    
+    lh_mapping_matrix = load_npz("data/fmri_data/mappers/" + subject + "_listening_forVL_lh.npz")
+    lh_vertex_correlation_data = lh_mapping_matrix.dot(flattened_correlations)
+    lh_vertex_coords = np.load("data/fmri_data/mappers/" + subject + "_vertex_coords_lh.npy")
+
+    rh_mapping_matrix = load_npz("data/fmri_data/mappers/" + subject + "_listening_forVL_rh.npz")
+    rh_vertex_correlation_data = rh_mapping_matrix.dot(flattened_correlations)
+    rh_vertex_coords = np.load("data/fmri_data/mappers/" + subject + "_vertex_coords_rh.npy")
+
+    vmin, vmax = -0.1, 0.1
+    fig, axs = plt.subplots(1, 2, figsize=(7,4))
+
+    # Plot the first flatmap
+    sc1 = axs[0].scatter(lh_vertex_coords[:, 0], lh_vertex_coords[:, 1], c=lh_vertex_correlation_data, cmap='RdBu_r', vmin=vmin, vmax=vmax, s=.005)
+    axs[0].set_aspect('equal', adjustable='box')  # Ensure equal scaling
+    # axs[0].set_title('Left Hemisphere')
+    axs[0].set_frame_on(False)
+    axs[0].set_xticks([])  # Remove x-axis ticks
+    axs[0].set_yticks([])  # Remove y-axis ticks
+
+    # Plot the second flatmap
+    sc2 = axs[1].scatter(rh_vertex_coords[:, 0], rh_vertex_coords[:, 1], c=rh_vertex_correlation_data, cmap='RdBu_r', vmin=vmin, vmax=vmax, s=.005)
+    axs[1].set_aspect('equal', adjustable='box')  # Ensure equal scaling
+    # axs[1].set_title('Right Hemisphere')
+    axs[1].set_frame_on(False)
+    axs[1].set_xticks([])  # Remove x-axis ticks
+    axs[1].set_yticks([])  # Remove y-axis ticks
+
+    # Adjust layout to make space for the top colorbar
+    plt.subplots_adjust(top=0.85, wspace=0)
+
+    # Add a single horizontal colorbar at the top
+    cbar_ax = fig.add_axes([0.25, 0.9, 0.5, 0.03])  # Adjust these values as needed [left, bottom, width, height]
+    cbar = fig.colorbar(sc1, cax=cbar_ax, orientation='horizontal')
+
+    # Set the color bar to only display min and max values
+    cbar.set_ticks([vmin, vmax])
+    cbar.set_ticklabels([f'{vmin}', f'{vmax}'])
+
+    # Remove the color bar box
+    cbar.outline.set_visible(False)
+    if modality == 'vision':
+        plt.title(f'{subject}\n$r_{{\mathit{{movie \rightarrow story}}}}$')
+        plt.savefig('results/movie_to_story/' + subject + '/layer' + layer + '_visual.png', format='png')
+    elif modality == 'language':
+        plt.title(f'{subject}\n$r_{{\mathit{{story \rightarrow movie}}}}$')
+        plt.savefig('results/story_to_movie/' + subject + '/layer' + layer + '_visual.png', format='png')
+    plt.show()
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 4: 
@@ -595,7 +662,9 @@ if __name__ == "__main__":
             np.save(correlations, 'results/movie_to_story/' + subject + '/layer' + layer + '_correlations.npy')
 
             # Create visualization
-
+            create_flatmap(subject, layer, correlations, modality)
+        elif modality == "language":
+            
             
 
     else:
