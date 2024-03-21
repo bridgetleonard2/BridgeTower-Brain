@@ -35,13 +35,13 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
 ## Results
 **Replication**
 <div align="center">
-  <img src="/literature/s1_movie_story.jpg" alt="Original Data" style="width:48%; float: left; margin-right: 2%;" />
-  <img src="/results/visuals/s1_movie_story.png" alt="Replication Data" style="width:48%; float: left;" />
+  <img src="/literature/s1_movie_story.jpg" alt="Original Data" style="width:45%; float: left; margin-right: 2%;" />
+  <img src="/results/visuals/s1_movie_story.png" alt="Replication Data" style="width:52%; float: left;" />
   <br>
   <i>Using the vision encoding model to predict fMRI responses to stories. Original finding (left) vs replicated result (right)</i>
   <br>
-  <img src="/literature/s1_story_movie.jpg" alt="Original Data" style="width:48%; float: left; margin-right: 2%;"/>
-  <img src="/results/visuals/s1_story_movie.png" alt="Replication Data" style="width:48%; float: left;" />
+  <img src="/literature/s1_story_movie.jpg" alt="Original Data" style="width:45%; float: left; margin-right: 2%;"/>
+  <img src="/results/visuals/s1_story_movie.png" alt="Replication Data" style="width:52%; float: left;" />
   <br>
   <i>Using the language encoding model to predict fMRI responses to movies. Original finding (left) vs replicated result (right)</i>
   <br>
