@@ -390,7 +390,7 @@ def alignment(layer):
 
         _ = model(**image_input)
 
-        image_vector = features['layer_8']
+        image_vector = features[f'layer_{layer}']
 
         # Run caption
         # Create a numpy array filled with gray values (128 in this case)
@@ -404,7 +404,7 @@ def alignment(layer):
                          value in caption_input.items()}
         _ = model(**caption_input)
 
-        caption_vector = features['layer_8']
+        caption_vector = features[f'layer_{layer}']
 
         data.append([image_vector, caption_vector])
 
