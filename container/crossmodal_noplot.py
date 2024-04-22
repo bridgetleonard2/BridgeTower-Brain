@@ -8,7 +8,7 @@ import torch
 from torch.nn.functional import pad
 import h5py
 from datasets import load_dataset
-from scipy.sparse import load_npz
+# from scipy.sparse import load_npz
 
 # Ridge regression
 from himalaya.ridge import RidgeCV
@@ -238,6 +238,7 @@ def get_movie_features(movie_data, layer, n=30):
 
                 if all(tensor.size() == first_size for tensor in tensors):
                     avg_feature = torch.mean(torch.stack(tensors), dim=0)
+                    avg_feature_numpy = avg_feature.cpu().numpy()
                 else:
                     # Find problem dimension
                     for dim in range(tensors[0].dim()):
