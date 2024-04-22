@@ -262,20 +262,22 @@ def get_movie_features(movie_data, layer, n=30):
                                 padded_tensor = pad(tensor, tuple(pad_list))
                                 padded_tensors.append(padded_tensor)
 
+                    # calculate average feature and convert by to numpy
                     avg_feature = torch.mean(torch.stack(padded_tensors),
                                              dim=0)
 
+                    avg_feature_numpy = avg_feature.cpu().numpy()
+
                 if name not in data:
                     data[name] = []
-                data[name].append(avg_feature)
+                data[name].append(avg_feature_numpy)
 
             avg_data = {}
 
     layer_selected.remove()
 
     # Save data
-    data = data[f'layer_{layer}'].cpu()
-    data = data.numpy()
+    data = data[f'layer_{layer}']
 
     return data
 
@@ -339,13 +341,14 @@ def get_story_features(story_data, layer, n=20):
         for name, tensor in features.items():
             if name not in data:
                 data[name] = []
-            data[name].append(tensor)
+            # convert tensor back to numpy
+            numpy_tensor = tensor.cpu().numpy()
+            data[name].append(numpy_tensor)
 
     layer_selected.remove()
 
     # Save data
-    data = data[f'layer_{layer}'].cpu()
-    data = data.numpy()
+    data = data[f'layer_{layer}']
 
     return data
 
@@ -459,7 +462,7 @@ def vision_model(subject, layer):
         in the fmri data.
     """
     data_path = 'data/raw_stimuli/shortclips/stimuli/'
-
+    print("extracting features from data")
     # Extract features from raw stimuli
     train00 = get_movie_features(data_path + 'train_00.hdf', layer)
     train01 = get_movie_features(data_path + 'train_01.hdf', layer)
