@@ -2,7 +2,7 @@
 torch==2.1.1
 
 # Hugging Face Transformers for the BridgeTower model
-transformers==4.36.0.dev0
+transformers>=4.38.0
 
 # Data handling
 numpy==1.26.2
