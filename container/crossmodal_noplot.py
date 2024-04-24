@@ -349,7 +349,7 @@ def get_story_features(story_data, layer, n=20):
     layer_selected.remove()
 
     # Save data
-    data = data[f'layer_{layer}']
+    data = np.array(data[f'layer_{layer}'])
 
     return data
 
