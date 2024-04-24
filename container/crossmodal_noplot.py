@@ -278,7 +278,7 @@ def get_movie_features(movie_data, layer, n=30):
     layer_selected.remove()
 
     # Save data
-    data = data[f'layer_{layer}']
+    data = np.array(data[f'layer_{layer}'])
 
     return data
 
