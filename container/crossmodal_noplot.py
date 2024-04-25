@@ -374,8 +374,8 @@ def alignment(layer):
         Array of shape (layer_output_size, layer_output_size) mapping
             the relationship of caption features to image features.
     """
-    test_dataset = load_dataset("nlphuji/flickr30k", split='test',
-                                streaming=True)
+    test_dataset = load_dataset("nlphuji/flickr30k", split='test')
+    # dont use streaming bc it changes object type: , streaming=True)
 
     # Define Model
     device, model, processor, features, layer_selected = setup_model(layer)
