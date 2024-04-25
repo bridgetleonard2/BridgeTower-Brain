@@ -374,42 +374,44 @@ def alignment(layer):
         Array of shape (layer_output_size, layer_output_size) mapping
             the relationship of caption features to image features.
     """
-    test_dataset = load_dataset("nlphuji/flickr30k", split='test')
-    # dont use streaming bc it changes object type: , streaming=True)
+    test_dataset = load_dataset("nlphuji/flickr30k", split='test',
+                                streaming=True)
 
     # Define Model
     device, model, processor, features, layer_selected = setup_model(layer)
 
     data = []
 
-    for item in range(len(test_dataset)):
-        image = test_dataset[item]['image']
+    # Assuming 'test_dataset' is an IterableDataset from a streaming source
+    for item in test_dataset:
+        # Access data directly from the item, no need for indexing
+        image = item['image']
         image_array = np.array(image)
-        caption = " ".join(test_dataset[item]['caption'])
+        caption = " ".join(item['caption'])
 
         # Run image
         image_input = processor(image_array, "", return_tensors="pt")
-        image_input = {key: value.to(device) for key,
-                       value in image_input.items()}
+        image_input = {key: value.to(device)
+                       for key, value in image_input.items()}
 
         _ = model(**image_input)
-
         image_vector = features[f'layer_{layer}']
 
         # Run caption
         # Create a numpy array filled with gray values (128 in this case)
-        # THis will act as tthe zero image input***
+        # This will act as the zero image input
         gray_value = 128
         gray_image_array = np.full((512, 512, 3), gray_value, dtype=np.uint8)
 
         caption_input = processor(gray_image_array, caption,
                                   return_tensors="pt")
-        caption_input = {key: value.to(device) for key,
-                         value in caption_input.items()}
+        caption_input = {key: value.to(device)
+                         for key, value in caption_input.items()}
         _ = model(**caption_input)
 
         caption_vector = features[f'layer_{layer}']
 
+        # Assuming 'data' is a list that's already been initialized
         data.append([image_vector, caption_vector])
 
     # Run encoding model
