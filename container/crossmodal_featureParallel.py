@@ -8,6 +8,7 @@ import torch
 from torch.nn.functional import pad
 import h5py
 from datasets import load_dataset
+from multiprocessing import Pool
 
 # Ridge regression
 from himalaya.ridge import RidgeCV
@@ -183,105 +184,48 @@ def setup_model(layer):
 
 
 # Main functions
-def get_movie_features(movie_data, layer, n=30):
-    """Function to average feature vectors over every n inputs.
-
-    Parameters
-    ----------
-    movie_data: Array
-        An array of shape (n_images, 512, 512). Represents frames from
-        a color movie.
-    n (optional): int
-        Number of frames to average over. Set at 30 to mimick an MRI
-        TR = 2 with a 15 fps movie.
-
-    Returns
-    -------
-    data : Dictionary
-        Dictionary where keys are the model layer from which activations are
-        extracted. Values are lists representing activations of 768 dimensions
-        over the course of n_images / 30.
-    """
-    print("loading HDF array")
-    movie_data = load_hdf5_array(movie_data, key='stimuli')
-
-    # Define Model
-    device, model, processor, features, layer_selected = setup_model(layer)
-
-    # create overall data structure for average feature vectors
-    # a dictionary with layer names as keys and a list of vectors as it values
-    data = {}
-
-    # a dictionary to store vectors for n consecutive trials
+def process_batch(batch_data, device, model, processor, features, layer_selected):
     avg_data = {}
-
-    print("Running movie through model")
-    # loop through all inputs
-    for i, image in tqdm(enumerate(movie_data)):
-
+    for image in batch_data:
         model_input = processor(image, "", return_tensors="pt")
-        # Assuming model_input is a dictionary of tensors
-        model_input = {key: value.to(device) for key,
-                       value in model_input.items()}
-
+        model_input = {key: value.to(device) for key, value in model_input.items()}
         _ = model(**model_input)
-
         for name, tensor in features.items():
             if name not in avg_data:
                 avg_data[name] = []
             avg_data[name].append(tensor)
 
-        # check if average should be stored
-        if (i + 1) % n == 0:
-            for name, tensors in avg_data.items():
-                first_size = tensors[0].size()
+    batch_result = {}
+    for name, tensors in avg_data.items():
+        avg_feature = torch.mean(torch.stack(tensors), dim=0)
+        avg_feature_numpy = avg_feature.cpu().numpy()
+        batch_result[name] = avg_feature_numpy
+    return batch_result
 
-                if all(tensor.size() == first_size for tensor in tensors):
-                    avg_feature = torch.mean(torch.stack(tensors), dim=0)
-                    avg_feature_numpy = avg_feature.cpu().numpy()
-                    # print(len(avg_feature_numpy))
-                else:
-                    # Find problem dimension
-                    for dim in range(tensors[0].dim()):
-                        first_dim = tensors[0].size(dim)
+def get_movie_features_parallel(movie_data, layer, n=30, num_workers=4):
+    print("loading HDF array")
+    movie_data = load_hdf5_array(movie_data, key='stimuli')
 
-                        if not all(tensor.size(dim) == first_dim
-                                   for tensor in tensors):
-                            # Specify place to pad
-                            p_dim = (tensors[0].dim()*2) - (dim + 2)
-                            # print(p_dim)
-                            max_size = max(tensor.size(dim)
-                                           for tensor in tensors)
-                            padded_tensors = []
+    device, model, processor, features, layer_selected = setup_model(layer)
 
-                            for tensor in tensors:
-                                # Make a list with length of 2*dimensions - 1
-                                # to insert pad later
-                                pad_list = [0] * ((2*tensor[0].dim()) - 1)
-                                pad_list.insert(
-                                    p_dim, max_size - tensor.size(dim))
-                                # print(tuple(pad_list))
-                                padded_tensor = pad(tensor, tuple(pad_list))
-                                padded_tensors.append(padded_tensor)
+    # Split data into batches
+    num_batches = len(movie_data) // n
+    batches = [movie_data[i * n:(i + 1) * n] for i in range(num_batches)]
 
-                    avg_feature = torch.mean(torch.stack(padded_tensors),
-                                             dim=0)
-                    avg_feature_numpy = avg_feature.cpu().numpy()
-                    # print(len(avg_feature_numpy))
+    # Process each batch in parallel
+    with Pool(num_workers) as p:
+        results = p.starmap(process_batch, [(batch, device, model, processor, features, layer_selected) for batch in batches])
 
-                if name not in data:
-                    data[name] = []
-                data[name].append(avg_feature_numpy)
-
-            avg_data = {}
+    # Combine results
+    combined_results = {f"layer_{layer}": []}
+    for result in results:
+        for name, feature_vector in result.items():
+            combined_results[name].append(feature_vector)
 
     layer_selected.remove()
 
-    # Save data
-    data = np.array(data[f"layer_{layer}"])
     print("Got movie features")
-
-    return data
+    return np.array(combined_results[f"layer_{layer}"])
 
 
 def get_story_features(story_data, layer, n=20):
@@ -390,6 +334,7 @@ def alignment(layer):
     # Assuming 'test_dataset' is an IterableDataset from a streaming source
     for item in tqdm(test_dataset):
         # Access data directly from the item, no need for indexing
+        print(item.keys())
         image = item['image']
         image_array = np.array(image)
         caption = " ".join(item['caption'])
