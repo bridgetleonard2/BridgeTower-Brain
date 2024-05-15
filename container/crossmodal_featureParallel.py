@@ -8,7 +8,7 @@ import torch
 from torch.nn.functional import pad
 import h5py
 from datasets import load_dataset
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 # Ridge regression
 from himalaya.ridge import RidgeCV
@@ -184,11 +184,13 @@ def setup_model(layer):
 
 
 # Main functions
-def process_batch(batch_data, device, model, processor, features, layer_selected):
+def process_batch(batch_data, device, model, processor,
+                  features, layer_selected):
     avg_data = {}
     for image in batch_data:
         model_input = processor(image, "", return_tensors="pt")
-        model_input = {key: value.to(device) for key, value in model_input.items()}
+        model_input = {key: value.to(device) for key, value
+                       in model_input.items()}
         _ = model(**model_input)
         for name, tensor in features.items():
             if name not in avg_data:
@@ -202,11 +204,15 @@ def process_batch(batch_data, device, model, processor, features, layer_selected
         batch_result[name] = avg_feature_numpy
     return batch_result
 
-def get_movie_features_parallel(movie_data, layer, n=30, num_workers=4):
+
+def get_movie_features_parallel(movie_data, layer, n=30, num_workers=None):
     print("loading HDF array")
     movie_data = load_hdf5_array(movie_data, key='stimuli')
 
     device, model, processor, features, layer_selected = setup_model(layer)
+
+    if num_workers is None:
+        num_workers = cpu_count()
 
     # Split data into batches
     num_batches = len(movie_data) // n
@@ -214,7 +220,9 @@ def get_movie_features_parallel(movie_data, layer, n=30, num_workers=4):
 
     # Process each batch in parallel
     with Pool(num_workers) as p:
-        results = p.starmap(process_batch, [(batch, device, model, processor, features, layer_selected) for batch in batches])
+        results = p.starmap(process_batch,
+                            [(batch, device, model, processor,
+                              features, layer_selected) for batch in batches])
 
     # Combine results
     combined_results = {f"layer_{layer}": []}
@@ -228,76 +236,67 @@ def get_movie_features_parallel(movie_data, layer, n=30, num_workers=4):
     return np.array(combined_results[f"layer_{layer}"])
 
 
-def get_story_features(story_data, layer, n=20):
-    """Function to extract feature vectors for each word of a story.
+def process_segment(segment, index, device, model, processor, features,
+                    layer, total_len, n):
+    data_segment = {}
+    for i, word in enumerate(segment):
+        # Adjust index to fit within the complete story data
+        adjusted_index = index + i
 
-    Parameters
-    ----------
-    story_data: Array
-        An array containing each word of the story in order.
-    n (optional): int
-        Number of words to to pad the target word with for
-        context (before and after).
+        # Determine context window bounds
+        start = max(0, adjusted_index - n)
+        end = min(total_len, adjusted_index + n + 1)
+        word_with_context = ' '.join(segment[start - index:end - index])
 
-    Returns
-    -------
-    data : Dictionary
-        Dictionary where keys are the model layer from which activations are
-        extracted. Values are lists representing activations of 768 dimensions
-        over the course of each word in the story.
-    """
-    print("loading textgrid")
-    story_data = textgrid_to_array(story_data)
-
-    # Define Model
-    device, model, processor, features, layer_selected = setup_model(layer)
-
-    # Create a numpy array filled with gray values (128 in this case)
-    # THis will act as tthe zero image input***
-    gray_value = 128
-    image_array = np.full((512, 512, 3), gray_value, dtype=np.uint8)
-
-    # create overall data structure for average feature vectors
-    # a dictionary with layer names as keys and a list of vectors as it values
-    data = {}
-
-    print("Running story through model")
-    # loop through all inputs
-    for i, word in tqdm(enumerate(story_data)):
-        # if one of first 20 words, just pad with all the words before it
-        if i < n:
-            # collapse list of strings into a single one
-            word_with_context = ' '.join(story_data[:(i+n)])
-        # if one of last 20 words, just pad with all the words after it
-        elif i > (len(story_data) - n):
-            # collapse list of strings into a single one
-            word_with_context = ' '.join(story_data[(i-n):])
-            # collapse list of strings into a single one
-        else:
-            word_with_context = ' '.join(story_data[(i-n):(i+n)])
-
-        model_input = processor(image_array, word_with_context,
-                                return_tensors="pt")
-        # Assuming model_input is a dictionary of tensors
-        model_input = {key: value.to(device) for key,
-                       value in model_input.items()}
-
+        model_input = processor(word_with_context, return_tensors="pt")
+        model_input = {key: value.to(device) for
+                       key, value in model_input.items()}
         _ = model(**model_input)
 
         for name, tensor in features.items():
-            if name not in data:
-                data[name] = []
+            if name not in data_segment:
+                data_segment[name] = []
             numpy_tensor = tensor.cpu().numpy()
+            data_segment[name].append(numpy_tensor)
 
-            data[name].append(numpy_tensor)
+    return data_segment
+
+
+def get_story_features_parallel(story_data, layer, n=20, num_workers=None):
+    print("loading textgrid")
+    story_data = textgrid_to_array(story_data)
+
+    device, model, processor, features, layer_selected = setup_model(layer)
+
+    if num_workers is None:
+        num_workers = cpu_count()
+
+    # Split data into segments with overlap
+    # segment_length = 2 * n + 1  # Each seg has target word and n before/after
+    segments = [story_data[max(0, i - n):min(len(story_data), i + n + 1)]
+                for i in range(len(story_data))]
+    segment_indices = [max(0, i - n) for i in range(len(story_data))]
+
+    # Process each segment in parallel
+    with Pool(num_workers) as p:
+        results = p.starmap(process_segment, [(segments[i], segment_indices[i],
+                                               device, model, processor,
+                                               features, layer,
+                                               len(story_data), n)
+                                              for i in range(len(story_data))])
+
+    # Combine results
+    combined_results = {f"layer_{layer}": []}
+    for result in results:
+        for name, feature_vectors in result.items():
+            if name not in combined_results:
+                combined_results[name] = []
+            combined_results[name].extend(feature_vectors)
 
     layer_selected.remove()
 
-    # Save data
-    data = np.array(data[f'layer_{layer}'])
     print("Got story features")
-
-    return data
+    return np.array(combined_results[f'layer_{layer}'])
 
 
 def alignment(layer):
@@ -419,19 +418,19 @@ def vision_model(subject, layer):
     print("Extracting features from data")
 
     # Extract features from raw stimuli
-    train00 = get_movie_features(data_path + 'train_00.hdf', layer)
-    train01 = get_movie_features(data_path + 'train_01.hdf', layer)
-    train02 = get_movie_features(data_path + 'train_02.hdf', layer)
-    train03 = get_movie_features(data_path + 'train_03.hdf', layer)
-    train04 = get_movie_features(data_path + 'train_04.hdf', layer)
-    train05 = get_movie_features(data_path + 'train_05.hdf', layer)
-    train06 = get_movie_features(data_path + 'train_06.hdf', layer)
-    train07 = get_movie_features(data_path + 'train_07.hdf', layer)
-    train08 = get_movie_features(data_path + 'train_08.hdf', layer)
-    train09 = get_movie_features(data_path + 'train_09.hdf', layer)
-    train10 = get_movie_features(data_path + 'train_10.hdf', layer)
-    train11 = get_movie_features(data_path + 'train_11.hdf', layer)
-    test = get_movie_features(data_path + 'test.hdf', layer)
+    train00 = get_movie_features_parallel(data_path + 'train_00.hdf', layer)
+    train01 = get_movie_features_parallel(data_path + 'train_01.hdf', layer)
+    train02 = get_movie_features_parallel(data_path + 'train_02.hdf', layer)
+    train03 = get_movie_features_parallel(data_path + 'train_03.hdf', layer)
+    train04 = get_movie_features_parallel(data_path + 'train_04.hdf', layer)
+    train05 = get_movie_features_parallel(data_path + 'train_05.hdf', layer)
+    train06 = get_movie_features_parallel(data_path + 'train_06.hdf', layer)
+    train07 = get_movie_features_parallel(data_path + 'train_07.hdf', layer)
+    train08 = get_movie_features_parallel(data_path + 'train_08.hdf', layer)
+    train09 = get_movie_features_parallel(data_path + 'train_09.hdf', layer)
+    train10 = get_movie_features_parallel(data_path + 'train_10.hdf', layer)
+    train11 = get_movie_features_parallel(data_path + 'train_11.hdf', layer)
+    test = get_movie_features_parallel(data_path + 'test.hdf', layer)
 
     # Build encoding model
     print("Loading movie fMRI data")
@@ -547,21 +546,24 @@ def language_model(subject, layer):
     print("Extracting features from data")
 
     # Extract features from raw stimuli
-    alternateithicatom = get_story_features(data_path +
-                                            'alternateithicatom.TextGrid',
+    alternateithicatom = get_story_features_parallel(data_path +
+                                                     'alternateithicatom.TextGrid',
+                                                     layer)
+    avatar = get_story_features_parallel(data_path + 'avatar.TextGrid', layer)
+    howtodraw = get_story_features_parallel(data_path + 'howtodraw.TextGrid',
                                             layer)
-    avatar = get_story_features(data_path + 'avatar.TextGrid', layer)
-    howtodraw = get_story_features(data_path + 'howtodraw.TextGrid', layer)
-    legacy = get_story_features(data_path + 'legacy.TextGrid', layer)
-    life = get_story_features(data_path + 'life.TextGrid', layer)
-    yankees = get_story_features(data_path +
-                                 'myfirstdaywiththeyankees.TextGrid', layer)
-    naked = get_story_features(data_path +
-                               'alternateithicatom.TextGrid', layer)
-    ode = get_story_features(data_path + 'naked.TextGrid', layer)
-    souls = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
-    undertheinfluence = get_story_features(data_path +
-                                           'undertheinfluence.TextGrid', layer)
+    legacy = get_story_features_parallel(data_path + 'legacy.TextGrid', layer)
+    life = get_story_features_parallel(data_path + 'life.TextGrid', layer)
+    yankees = get_story_features_parallel(data_path +
+                                          'myfirstdaywiththeyankees.TextGrid',
+                                          layer)
+    naked = get_story_features_parallel(data_path +
+                                        'naked.TextGrid', layer)
+    ode = get_story_features_parallel(data_path + 'odetostepfather.TextGrid',
+                                      layer)
+    souls = get_story_features_parallel(data_path + 'souls.TextGrid', layer)
+    undertheinfluence = get_story_features_parallel(data_path +
+                                                    'undertheinfluence.TextGrid', layer)
 
     # Build encoding model
     print('Load story fMRI data')
@@ -692,20 +694,20 @@ def story_prediction(subject, layer, vision_encoding_matrix):
 
     data_path = 'data/raw_stimuli/textgrids/stimuli/'
     # Get story features
-    alternateithicatom = get_story_features(data_path +
+    alternateithicatom = get_story_features_parallel(data_path +
                                             'alternateithicatom.TextGrid',
                                             layer)
-    avatar = get_story_features(data_path + 'avatar.TextGrid', layer)
-    howtodraw = get_story_features(data_path + 'howtodraw.TextGrid', layer)
-    legacy = get_story_features(data_path + 'legacy.TextGrid', layer)
-    life = get_story_features(data_path + 'life.TextGrid', layer)
-    yankees = get_story_features(data_path +
+    avatar = get_story_features_parallel(data_path + 'avatar.TextGrid', layer)
+    howtodraw = get_story_features_parallel(data_path + 'howtodraw.TextGrid', layer)
+    legacy = get_story_features_parallel(data_path + 'legacy.TextGrid', layer)
+    life = get_story_features_parallel(data_path + 'life.TextGrid', layer)
+    yankees = get_story_features_parallel(data_path +
                                  'myfirstdaywiththeyankees.TextGrid', layer)
-    naked = get_story_features(data_path + 'alternateithicatom.TextGrid',
+    naked = get_story_features_parallel(data_path + 'naked.TextGrid',
                                layer)
-    ode = get_story_features(data_path + 'naked.TextGrid', layer)
-    souls = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
-    undertheinfluence = get_story_features(data_path +
+    ode = get_story_features_parallel(data_path + 'odetostepfather.TextGrid', layer)
+    souls = get_story_features_parallel(data_path + 'souls.TextGrid', layer)
+    undertheinfluence = get_story_features_parallel(data_path +
                                            'undertheinfluence.TextGrid', layer)
 
     # Project features into opposite space
@@ -818,19 +820,19 @@ def movie_predictions(subject, layer, language_encoding_model):
 
     data_path = 'data/raw_stimuli/shortclips/stimuli/'
     # Get movie features
-    train00 = get_movie_features(data_path + 'train_00.hdf', layer)
-    train01 = get_movie_features(data_path + 'train_01.hdf', layer)
-    train02 = get_movie_features(data_path + 'train_02.hdf', layer)
-    train03 = get_movie_features(data_path + 'train_03.hdf', layer)
-    train04 = get_movie_features(data_path + 'train_04.hdf', layer)
-    train05 = get_movie_features(data_path + 'train_05.hdf', layer)
-    train06 = get_movie_features(data_path + 'train_06.hdf', layer)
-    train07 = get_movie_features(data_path + 'train_07.hdf', layer)
-    train08 = get_movie_features(data_path + 'train_08.hdf', layer)
-    train09 = get_movie_features(data_path + 'train_09.hdf', layer)
-    train10 = get_movie_features(data_path + 'train_10.hdf', layer)
-    train11 = get_movie_features(data_path + 'train_11.hdf', layer)
-    test = get_movie_features(data_path + 'test.hdf', layer)
+    train00 = get_movie_features_parallel(data_path + 'train_00.hdf', layer)
+    train01 = get_movie_features_parallel(data_path + 'train_01.hdf', layer)
+    train02 = get_movie_features_parallel(data_path + 'train_02.hdf', layer)
+    train03 = get_movie_features_parallel(data_path + 'train_03.hdf', layer)
+    train04 = get_movie_features_parallel(data_path + 'train_04.hdf', layer)
+    train05 = get_movie_features_parallel(data_path + 'train_05.hdf', layer)
+    train06 = get_movie_features_parallel(data_path + 'train_06.hdf', layer)
+    train07 = get_movie_features_parallel(data_path + 'train_07.hdf', layer)
+    train08 = get_movie_features_parallel(data_path + 'train_08.hdf', layer)
+    train09 = get_movie_features_parallel(data_path + 'train_09.hdf', layer)
+    train10 = get_movie_features_parallel(data_path + 'train_10.hdf', layer)
+    train11 = get_movie_features_parallel(data_path + 'train_11.hdf', layer)
+    test = get_movie_features_parallel(data_path + 'test.hdf', layer)
 
     # Project features into opposite space
     test_transformed = np.dot(test, coef_images_to_captions.T)

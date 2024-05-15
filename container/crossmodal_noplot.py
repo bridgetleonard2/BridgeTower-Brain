@@ -612,9 +612,9 @@ def language_model(subject, layer):
     yankees = get_story_features(data_path +
                                  'myfirstdaywiththeyankees.TextGrid', layer)
     naked = get_story_features(data_path +
-                               'alternateithicatom.TextGrid', layer)
-    ode = get_story_features(data_path + 'naked.TextGrid', layer)
-    souls = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
+                               'naked.TextGrid', layer)
+    ode = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
+    souls = get_story_features(data_path + 'souls.TextGrid', layer)
     undertheinfluence = get_story_features(data_path +
                                            'undertheinfluence.TextGrid', layer)
 
@@ -756,10 +756,10 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     life = get_story_features(data_path + 'life.TextGrid', layer)
     yankees = get_story_features(data_path +
                                  'myfirstdaywiththeyankees.TextGrid', layer)
-    naked = get_story_features(data_path + 'alternateithicatom.TextGrid',
+    naked = get_story_features(data_path + 'naked.TextGrid',
                                layer)
-    ode = get_story_features(data_path + 'naked.TextGrid', layer)
-    souls = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
+    ode = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
+    souls = get_story_features(data_path + 'souls.TextGrid', layer)
     undertheinfluence = get_story_features(data_path +
                                            'undertheinfluence.TextGrid', layer)
 
