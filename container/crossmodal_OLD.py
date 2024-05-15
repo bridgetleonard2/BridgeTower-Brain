@@ -8,6 +8,7 @@ import torch
 from torch.nn.functional import pad
 import h5py
 from datasets import load_dataset
+from scipy.sparse import load_npz
 
 # Ridge regression
 from himalaya.ridge import RidgeCV
@@ -24,7 +25,8 @@ from transformers import BridgeTowerModel, BridgeTowerProcessor
 from functions import remove_nan, prep_data, generate_leave_one_run_out, \
     calc_correlation, Delayer
 
-from tqdm import tqdm
+# Visualization
+import matplotlib.pyplot as plt
 
 
 # Helper functions
@@ -205,6 +207,8 @@ def get_movie_features(movie_data, layer, n=30):
     print("loading HDF array")
     movie_data = load_hdf5_array(movie_data, key='stimuli')
 
+    print("Running movie through model")
+
     # Define Model
     device, model, processor, features, layer_selected = setup_model(layer)
 
@@ -215,9 +219,8 @@ def get_movie_features(movie_data, layer, n=30):
     # a dictionary to store vectors for n consecutive trials
     avg_data = {}
 
-    print("Running movie through model")
     # loop through all inputs
-    for i, image in tqdm(enumerate(movie_data)):
+    for i, image in enumerate(movie_data):
 
         model_input = processor(image, "", return_tensors="pt")
         # Assuming model_input is a dictionary of tensors
@@ -238,8 +241,6 @@ def get_movie_features(movie_data, layer, n=30):
 
                 if all(tensor.size() == first_size for tensor in tensors):
                     avg_feature = torch.mean(torch.stack(tensors), dim=0)
-                    avg_feature_numpy = avg_feature.cpu().numpy()
-                    # print(len(avg_feature_numpy))
                 else:
                     # Find problem dimension
                     for dim in range(tensors[0].dim()):
@@ -266,20 +267,18 @@ def get_movie_features(movie_data, layer, n=30):
 
                     avg_feature = torch.mean(torch.stack(padded_tensors),
                                              dim=0)
-                    avg_feature_numpy = avg_feature.cpu().numpy()
-                    # print(len(avg_feature_numpy))
 
                 if name not in data:
                     data[name] = []
-                data[name].append(avg_feature_numpy)
+                data[name].append(avg_feature)
 
             avg_data = {}
 
     layer_selected.remove()
 
     # Save data
-    data = np.array(data[f"layer_{layer}"])
-    print("Got movie features")
+    data = data[f'layer_{layer}'].cpu()
+    data = data.numpy()
 
     return data
 
@@ -305,6 +304,7 @@ def get_story_features(story_data, layer, n=20):
     print("loading textgrid")
     story_data = textgrid_to_array(story_data)
 
+    print("Running story through model")
     # Define Model
     device, model, processor, features, layer_selected = setup_model(layer)
 
@@ -317,9 +317,8 @@ def get_story_features(story_data, layer, n=20):
     # a dictionary with layer names as keys and a list of vectors as it values
     data = {}
 
-    print("Running story through model")
     # loop through all inputs
-    for i, word in tqdm(enumerate(story_data)):
+    for i, word in enumerate(story_data):
         # if one of first 20 words, just pad with all the words before it
         if i < n:
             # collapse list of strings into a single one
@@ -343,15 +342,13 @@ def get_story_features(story_data, layer, n=20):
         for name, tensor in features.items():
             if name not in data:
                 data[name] = []
-            numpy_tensor = tensor.cpu().numpy()
-
-            data[name].append(numpy_tensor)
+            data[name].append(tensor)
 
     layer_selected.remove()
 
     # Save data
-    data = np.array(data[f'layer_{layer}'])
-    print("Got story features")
+    data = data[f'layer_{layer}'].cpu()
+    data = data.numpy()
 
     return data
 
@@ -376,47 +373,42 @@ def alignment(layer):
         Array of shape (layer_output_size, layer_output_size) mapping
             the relationship of caption features to image features.
     """
-    print("Starting feature alignment")
-    # Stream the dataset so it doesn't download to device
-    test_dataset = load_dataset("nlphuji/flickr30k", split='test',
-                                streaming=True)
+    dataset = load_dataset("nlphuji/flickr30k")
+    test_dataset = dataset['test']
 
     # Define Model
     device, model, processor, features, layer_selected = setup_model(layer)
 
     data = []
 
-    print("Running flickr through model")
-    # Assuming 'test_dataset' is an IterableDataset from a streaming source
-    for item in tqdm(test_dataset):
-        # Access data directly from the item, no need for indexing
-        image = item['image']
+    for item in range(len(test_dataset)):
+        image = test_dataset[item]['image']
         image_array = np.array(image)
-        caption = " ".join(item['caption'])
+        caption = " ".join(test_dataset[item]['caption'])
 
         # Run image
         image_input = processor(image_array, "", return_tensors="pt")
-        image_input = {key: value.to(device)
-                       for key, value in image_input.items()}
+        image_input = {key: value.to(device) for key,
+                       value in image_input.items()}
 
         _ = model(**image_input)
-        image_vector = features[f'layer_{layer}']
+
+        image_vector = features['layer_8']
 
         # Run caption
         # Create a numpy array filled with gray values (128 in this case)
-        # This will act as the zero image input
+        # THis will act as tthe zero image input***
         gray_value = 128
         gray_image_array = np.full((512, 512, 3), gray_value, dtype=np.uint8)
 
         caption_input = processor(gray_image_array, caption,
                                   return_tensors="pt")
-        caption_input = {key: value.to(device)
-                         for key, value in caption_input.items()}
+        caption_input = {key: value.to(device) for key,
+                         value in caption_input.items()}
         _ = model(**caption_input)
 
-        caption_vector = features[f'layer_{layer}']
+        caption_vector = features['layer_8']
 
-        # Assuming 'data' is a list that's already been initialized
         data.append([image_vector, caption_vector])
 
     # Run encoding model
@@ -446,7 +438,6 @@ def alignment(layer):
     _ = pipeline.fit(captions, images)
     coef_captions_to_images = backend.to_numpy(pipeline[-1].coef_)
 
-    print("Finished feature alignment")
     return coef_images_to_captions, coef_captions_to_images
 
 
@@ -471,7 +462,6 @@ def vision_model(subject, layer):
         in the fmri data.
     """
     data_path = 'data/raw_stimuli/shortclips/stimuli/'
-    print("Extracting features from data")
 
     # Extract features from raw stimuli
     train00 = get_movie_features(data_path + 'train_00.hdf', layer)
@@ -489,7 +479,7 @@ def vision_model(subject, layer):
     test = get_movie_features(data_path + 'test.hdf', layer)
 
     # Build encoding model
-    print("Loading movie fMRI data")
+    print("Load movie data")
     # Load fMRI data
     # Using all data for cross-modality encoding model
     fmri_train = np.load("data/moviedata/" + subject + "/train.npy")
@@ -532,7 +522,6 @@ def vision_model(subject, layer):
 
     alphas = np.logspace(1, 20, 20)
 
-    print("Running linear model")
     ridge_cv = RidgeCV(
         alphas=alphas, cv=cv,
         solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
@@ -574,7 +563,6 @@ def vision_model(subject, layer):
     print("(n_features, n_voxels) =", average_coef.shape)
     del coef_per_delay
 
-    print("Finished vision encoding model")
     return average_coef
 
 
@@ -599,8 +587,6 @@ def language_model(subject, layer):
         in the fmri data.
     """
     data_path = 'data/raw_stimuli/textgrids/stimuli/'
-    print("Extracting features from data")
-
     # Extract features from raw stimuli
     alternateithicatom = get_story_features(data_path +
                                             'alternateithicatom.TextGrid',
@@ -612,14 +598,14 @@ def language_model(subject, layer):
     yankees = get_story_features(data_path +
                                  'myfirstdaywiththeyankees.TextGrid', layer)
     naked = get_story_features(data_path +
-                               'naked.TextGrid', layer)
-    ode = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
-    souls = get_story_features(data_path + 'souls.TextGrid', layer)
+                               'alternateithicatom.TextGrid', layer)
+    ode = get_story_features(data_path + 'naked.TextGrid', layer)
+    souls = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
     undertheinfluence = get_story_features(data_path +
                                            'undertheinfluence.TextGrid', layer)
 
     # Build encoding model
-    print('Load story fMRI data')
+    print('Load movie data')
     # Load fmri data
     # Using all data for cross-modality encoding model
     fmri_alternateithicatom = np.load("data/storydata/" + subject +
@@ -685,7 +671,6 @@ def language_model(subject, layer):
 
     alphas = np.logspace(1, 20, 20)
 
-    print("Running linear model")
     ridge_cv = RidgeCV(
         alphas=alphas, cv=cv,
         solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
@@ -717,7 +702,6 @@ def language_model(subject, layer):
     print("(n_features, n_voxels) =", average_coef.shape)
     del coef_per_delay
 
-    print("Finished language encoding model")
     return average_coef
 
 
@@ -756,10 +740,10 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     life = get_story_features(data_path + 'life.TextGrid', layer)
     yankees = get_story_features(data_path +
                                  'myfirstdaywiththeyankees.TextGrid', layer)
-    naked = get_story_features(data_path + 'naked.TextGrid',
+    naked = get_story_features(data_path + 'alternateithicatom.TextGrid',
                                layer)
-    ode = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
-    souls = get_story_features(data_path + 'souls.TextGrid', layer)
+    ode = get_story_features(data_path + 'naked.TextGrid', layer)
+    souls = get_story_features(data_path + 'odetostepfather.TextGrid', layer)
     undertheinfluence = get_story_features(data_path +
                                            'undertheinfluence.TextGrid', layer)
 
@@ -942,11 +926,118 @@ def movie_predictions(subject, layer, language_encoding_model):
     return correlations
 
 
+def create_flatmap(subject, layer, correlations, modality):
+    """Function to run the vision encoding model. Predicts brain activity
+    to story listening and return correlations between predictions and real
+    brain activity.
+
+    Parameters
+    ----------
+    subject: string
+        A reference to the subject for analysis. Used to load fmri data.
+    layer: int
+        A layer reference for the BridgeTower model. Set's the forward
+        hook on the relevant layer.
+    correlations: array
+        Generated by story_prediction() or movie_prediction() function.
+        Contains the correlation between predicted and real brain activity
+        for each voxel.
+    modality: string
+        Which modality was used for the base encoding model: vision or
+        language.
+
+    Returns
+    -------
+    Flatmaps:
+        Saves flatmap visualizations as pngs
+    """
+    # Reverse flattening and masking
+    fmri_alternateithicatom = np.load("data/storydata/" + subject +
+                                      "/alternateithicatom.npy")
+
+    mask = ~np.isnan(fmri_alternateithicatom[0])  # reference for the mask
+    # Initialize an empty 3D array with NaNs for the correlation data
+    reconstructed_correlations = np.full((31, 100, 100), np.nan)
+
+    # Flatten the mask to get the indices of the non-NaN data points
+    valid_indices = np.where(mask.flatten())[0]
+
+    # Assign the correlation coefficients to their original spatial positions
+    for index, corr_value in zip(valid_indices, correlations):
+        # Convert the 1D index back to 3D index in the spatial dimensions
+        z, x, y = np.unravel_index(index, (31, 100, 100))
+        reconstructed_correlations[z, x, y] = corr_value
+
+    flattened_correlations = reconstructed_correlations.flatten()
+
+    # Load mappers
+    lh_mapping_matrix = load_npz("data/mappers/" + subject +
+                                 "_listening_forVL_lh.npz")
+    lh_vertex_correlation_data = lh_mapping_matrix.dot(flattened_correlations)
+    lh_vertex_coords = np.load("data/mappers/" + subject +
+                               "_vertex_coords_lh.npy")
+
+    rh_mapping_matrix = load_npz("data/mappers/" + subject +
+                                 "_listening_forVL_rh.npz")
+    rh_vertex_correlation_data = rh_mapping_matrix.dot(flattened_correlations)
+    rh_vertex_coords = np.load("data/mappers/" + subject +
+                               "_vertex_coords_rh.npy")
+
+    vmin, vmax = -0.1, 0.1
+    fig, axs = plt.subplots(1, 2, figsize=(7, 4))
+
+    # Plot the first flatmap
+    sc1 = axs[0].scatter(lh_vertex_coords[:, 0], lh_vertex_coords[:, 1],
+                         c=lh_vertex_correlation_data, cmap='RdBu_r',
+                         vmin=vmin, vmax=vmax, s=.005)
+    axs[0].set_aspect('equal', adjustable='box')  # Ensure equal scaling
+    # axs[0].set_title('Left Hemisphere')
+    axs[0].set_frame_on(False)
+    axs[0].set_xticks([])  # Remove x-axis ticks
+    axs[0].set_yticks([])  # Remove y-axis ticks
+
+    # Plot the second flatmap
+    _ = axs[1].scatter(rh_vertex_coords[:, 0], rh_vertex_coords[:, 1],
+                       c=rh_vertex_correlation_data, cmap='RdBu_r',
+                       vmin=vmin, vmax=vmax, s=.005)
+    axs[1].set_aspect('equal', adjustable='box')  # Ensure equal scaling
+    # axs[1].set_title('Right Hemisphere')
+    axs[1].set_frame_on(False)
+    axs[1].set_xticks([])  # Remove x-axis ticks
+    axs[1].set_yticks([])  # Remove y-axis ticks
+
+    # Adjust layout to make space for the top colorbar
+    plt.subplots_adjust(top=0.85, wspace=0)
+
+    # Add a single horizontal colorbar at the top
+    cbar_ax = fig.add_axes([0.25, 0.9, 0.5, 0.03])
+    cbar = fig.colorbar(sc1, cax=cbar_ax, orientation='horizontal')
+
+    # Set the color bar to only display min and max values
+    cbar.set_ticks([vmin, vmax])
+    cbar.set_ticklabels([f'{vmin}', f'{vmax}'])
+
+    # Remove the color bar box
+    cbar.outline.set_visible(False)
+    if modality == 'vision':
+        latex = r"$r_{\mathit{movie \rightarrow story}}"
+        plt.title(f'{subject}\n{latex}$')
+
+        plt.savefig('results/movie_to_story/' + subject + '/layer' + layer +
+                    '_visual.png', format='png')
+    elif modality == 'language':
+        latex = r"$r_{\mathit{story \rightarrow movie}}"
+        plt.title(f'{subject}\n{latex}$')
+        plt.savefig('results/story_to_movie/' + subject + '/layer' + layer +
+                    '_visual.png', format='png')
+    plt.show()
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 4:
         subject = sys.argv[1]
         modality = sys.argv[2]
-        layer = int(sys.argv[3])
+        layer = sys.argv[3]
 
         if modality == "vision":
             print("Building vision model")
@@ -961,6 +1052,8 @@ if __name__ == "__main__":
             np.save(correlations, 'results/movie_to_story/' + subject +
                     '/layer' + layer + '_correlations.npy')
 
+            # Create visualization
+            create_flatmap(subject, layer, correlations, modality)
         elif modality == "language":
             print("Building language model")
             # Build encoding model
@@ -974,6 +1067,8 @@ if __name__ == "__main__":
             np.save(correlations, 'results/story_to_movie/' + subject +
                     '/layer' + layer + '_correlations.npy')
 
+            # Create visualization
+            create_flatmap(subject, layer, correlations, modality)
     else:
         print("This script requires exactly two arguments: subject, modality, \
                and layer. Ex. python crossmodal.py S1 vision 1")

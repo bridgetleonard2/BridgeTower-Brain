@@ -24,8 +24,6 @@ from transformers import BridgeTowerModel, BridgeTowerProcessor
 from functions import remove_nan, prep_data, generate_leave_one_run_out, \
     calc_correlation, Delayer
 
-from tqdm import tqdm
-
 
 # Helper functions
 def load_hdf5_array(file_name, key=None, slice=slice(0, None)):
@@ -205,6 +203,8 @@ def get_movie_features(movie_data, layer, n=30):
     print("loading HDF array")
     movie_data = load_hdf5_array(movie_data, key='stimuli')
 
+    print("Running movie through model")
+
     # Define Model
     device, model, processor, features, layer_selected = setup_model(layer)
 
@@ -215,9 +215,8 @@ def get_movie_features(movie_data, layer, n=30):
     # a dictionary to store vectors for n consecutive trials
     avg_data = {}
 
-    print("Running movie through model")
     # loop through all inputs
-    for i, image in tqdm(enumerate(movie_data)):
+    for i, image in enumerate(movie_data):
 
         model_input = processor(image, "", return_tensors="pt")
         # Assuming model_input is a dictionary of tensors
@@ -279,7 +278,7 @@ def get_movie_features(movie_data, layer, n=30):
 
     # Save data
     data = np.array(data[f"layer_{layer}"])
-    print("Got movie features")
+    # print(data.shape)
 
     return data
 
@@ -305,6 +304,7 @@ def get_story_features(story_data, layer, n=20):
     print("loading textgrid")
     story_data = textgrid_to_array(story_data)
 
+    print("Running story through model")
     # Define Model
     device, model, processor, features, layer_selected = setup_model(layer)
 
@@ -317,9 +317,8 @@ def get_story_features(story_data, layer, n=20):
     # a dictionary with layer names as keys and a list of vectors as it values
     data = {}
 
-    print("Running story through model")
     # loop through all inputs
-    for i, word in tqdm(enumerate(story_data)):
+    for i, word in enumerate(story_data):
         # if one of first 20 words, just pad with all the words before it
         if i < n:
             # collapse list of strings into a single one
@@ -351,7 +350,6 @@ def get_story_features(story_data, layer, n=20):
 
     # Save data
     data = np.array(data[f'layer_{layer}'])
-    print("Got story features")
 
     return data
 
@@ -376,55 +374,48 @@ def alignment(layer):
         Array of shape (layer_output_size, layer_output_size) mapping
             the relationship of caption features to image features.
     """
-    print("Starting feature alignment")
-    # Stream the dataset so it doesn't download to device
-    test_dataset = load_dataset("nlphuji/flickr30k", split='test',
-                                streaming=True)
+    test_dataset = load_dataset("nlphuji/flickr30k", split='test', streaming=True)
 
     # Define Model
     device, model, processor, features, layer_selected = setup_model(layer)
 
     data = []
 
-    print("Running flickr through model")
-    # Assuming 'test_dataset' is an IterableDataset from a streaming source
-    for item in tqdm(test_dataset):
-        # Access data directly from the item, no need for indexing
+    for item in test_dataset:
+        print(item.keys())
         image = item['image']
         image_array = np.array(image)
         caption = " ".join(item['caption'])
 
         # Run image
         image_input = processor(image_array, "", return_tensors="pt")
-        image_input = {key: value.to(device)
-                       for key, value in image_input.items()}
+        image_input = {key: value.to(device) for key,
+                       value in image_input.items()}
 
         _ = model(**image_input)
+
         image_vector = features[f'layer_{layer}']
 
         # Run caption
         # Create a numpy array filled with gray values (128 in this case)
-        # This will act as the zero image input
+        # THis will act as tthe zero image input***
         gray_value = 128
         gray_image_array = np.full((512, 512, 3), gray_value, dtype=np.uint8)
 
         caption_input = processor(gray_image_array, caption,
                                   return_tensors="pt")
-        caption_input = {key: value.to(device)
-                         for key, value in caption_input.items()}
+        caption_input = {key: value.to(device) for key,
+                         value in caption_input.items()}
         _ = model(**caption_input)
 
         caption_vector = features[f'layer_{layer}']
 
-        # Assuming 'data' is a list that's already been initialized
         data.append([image_vector, caption_vector])
 
     # Run encoding model
     backend = set_backend("torch_cuda", on_error="warn")
     print(backend)
 
-    # Test data
-    print(data.shape)
     # Variables
     captions = data[:, 1, :]
     images = data[:, 0, :]
@@ -448,7 +439,6 @@ def alignment(layer):
     _ = pipeline.fit(captions, images)
     coef_captions_to_images = backend.to_numpy(pipeline[-1].coef_)
 
-    print("Finished feature alignment")
     return coef_images_to_captions, coef_captions_to_images
 
 
@@ -473,8 +463,8 @@ def vision_model(subject, layer):
         in the fmri data.
     """
     data_path = 'data/raw_stimuli/shortclips/stimuli/'
-    print("Extracting features from data")
-
+    print("extracting features from data")
+    
     # Extract features from raw stimuli
     train00 = get_movie_features(data_path + 'train_00.hdf', layer)
     train01 = get_movie_features(data_path + 'train_01.hdf', layer)
@@ -491,7 +481,7 @@ def vision_model(subject, layer):
     test = get_movie_features(data_path + 'test.hdf', layer)
 
     # Build encoding model
-    print("Loading movie fMRI data")
+    print("Load movie data")
     # Load fMRI data
     # Using all data for cross-modality encoding model
     fmri_train = np.load("data/moviedata/" + subject + "/train.npy")
@@ -534,7 +524,6 @@ def vision_model(subject, layer):
 
     alphas = np.logspace(1, 20, 20)
 
-    print("Running linear model")
     ridge_cv = RidgeCV(
         alphas=alphas, cv=cv,
         solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
@@ -576,7 +565,6 @@ def vision_model(subject, layer):
     print("(n_features, n_voxels) =", average_coef.shape)
     del coef_per_delay
 
-    print("Finished vision encoding model")
     return average_coef
 
 
@@ -601,8 +589,6 @@ def language_model(subject, layer):
         in the fmri data.
     """
     data_path = 'data/raw_stimuli/textgrids/stimuli/'
-    print("Extracting features from data")
-
     # Extract features from raw stimuli
     alternateithicatom = get_story_features(data_path +
                                             'alternateithicatom.TextGrid',
@@ -621,7 +607,7 @@ def language_model(subject, layer):
                                            'undertheinfluence.TextGrid', layer)
 
     # Build encoding model
-    print('Load story fMRI data')
+    print('Load movie data')
     # Load fmri data
     # Using all data for cross-modality encoding model
     fmri_alternateithicatom = np.load("data/storydata/" + subject +
@@ -687,7 +673,6 @@ def language_model(subject, layer):
 
     alphas = np.logspace(1, 20, 20)
 
-    print("Running linear model")
     ridge_cv = RidgeCV(
         alphas=alphas, cv=cv,
         solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
@@ -719,7 +704,6 @@ def language_model(subject, layer):
     print("(n_features, n_voxels) =", average_coef.shape)
     del coef_per_delay
 
-    print("Finished language encoding model")
     return average_coef
 
 
@@ -952,8 +936,6 @@ if __name__ == "__main__":
 
         if modality == "vision":
             print("Building vision model")
-            # test alignment
-            test = alignment(layer)
             # Build encoding model
             vision_encoding_matrix = vision_model(subject, layer)
 
@@ -981,3 +963,5 @@ if __name__ == "__main__":
     else:
         print("This script requires exactly two arguments: subject, modality, \
                and layer. Ex. python crossmodal.py S1 vision 1")
+
+
