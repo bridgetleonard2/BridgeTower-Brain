@@ -238,7 +238,7 @@ def get_movie_features(movie_data, layer, n=30):
 
                 if all(tensor.size() == first_size for tensor in tensors):
                     avg_feature = torch.mean(torch.stack(tensors), dim=0)
-                    avg_feature_numpy = avg_feature.cpu().numpy()
+                    avg_feature_numpy = avg_feature.detach().cpu().numpy()
                     # print(len(avg_feature_numpy))
                 else:
                     # Find problem dimension
@@ -266,7 +266,7 @@ def get_movie_features(movie_data, layer, n=30):
 
                     avg_feature = torch.mean(torch.stack(padded_tensors),
                                              dim=0)
-                    avg_feature_numpy = avg_feature.cpu().numpy()
+                    avg_feature_numpy = avg_feature.detach().cpu().numpy()
                     # print(len(avg_feature_numpy))
 
                 if name not in data:
@@ -343,7 +343,7 @@ def get_story_features(story_data, layer, n=20):
         for name, tensor in features.items():
             if name not in data:
                 data[name] = []
-            numpy_tensor = tensor.cpu().numpy()
+            numpy_tensor = tensor.detach().cpu().numpy()
 
             data[name].append(numpy_tensor)
 
@@ -417,8 +417,8 @@ def alignment(layer):
         caption_vector = features[f'layer_{layer}']
 
         # Assuming 'data' is a list that's already been initialized
-        data.append([image_vector, caption_vector])
-
+        data.append([image_vector.detach().cpu().numpy(), caption_vector.detach().cpu().numpy()])  # Convert tensors to numpy arrays
+    
     # Run encoding model
     backend = set_backend("torch_cuda", on_error="warn")
     print(backend)
