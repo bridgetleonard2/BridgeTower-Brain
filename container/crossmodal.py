@@ -418,11 +418,12 @@ def alignment(layer):
 
         # Assuming 'data' is a list that's already been initialized
         data.append([image_vector.detach().cpu().numpy(), caption_vector.detach().cpu().numpy()])  # Convert tensors to numpy arrays
-    
+
     # Run encoding model
     backend = set_backend("torch_cuda", on_error="warn")
     print(backend)
 
+    data = np.array(data)
     # Test data
     print(data.shape)
     # Variables
