@@ -416,8 +416,8 @@ def alignment(layer):
 
         caption_vector = features[f'layer_{layer}']
 
-        # Assuming 'data' is a list that's already been initialized
-        data.append([image_vector.detach().cpu().numpy(), caption_vector.detach().cpu().numpy()])  # Convert tensors to numpy arrays
+        data.append([image_vector.detach().cpu().numpy(),
+                     caption_vector.detach().cpu().numpy()])
 
     # Run encoding model
     backend = set_backend("torch_cuda", on_error="warn")
@@ -953,8 +953,6 @@ if __name__ == "__main__":
 
         if modality == "vision":
             print("Building vision model")
-            # test alignment
-            test = alignment(layer)
             # Build encoding model
             vision_encoding_matrix = vision_model(subject, layer)
 

@@ -695,20 +695,23 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     data_path = 'data/raw_stimuli/textgrids/stimuli/'
     # Get story features
     alternateithicatom = get_story_features_parallel(data_path +
-                                            'alternateithicatom.TextGrid',
-                                            layer)
+                                                     'alternateithicatom.TextGrid',
+                                                     layer)
     avatar = get_story_features_parallel(data_path + 'avatar.TextGrid', layer)
-    howtodraw = get_story_features_parallel(data_path + 'howtodraw.TextGrid', layer)
+    howtodraw = get_story_features_parallel(data_path + 'howtodraw.TextGrid',
+                                            layer)
     legacy = get_story_features_parallel(data_path + 'legacy.TextGrid', layer)
     life = get_story_features_parallel(data_path + 'life.TextGrid', layer)
     yankees = get_story_features_parallel(data_path +
-                                 'myfirstdaywiththeyankees.TextGrid', layer)
+                                          'myfirstdaywiththeyankees.TextGrid',
+                                          layer)
     naked = get_story_features_parallel(data_path + 'naked.TextGrid',
-                               layer)
-    ode = get_story_features_parallel(data_path + 'odetostepfather.TextGrid', layer)
+                                        layer)
+    ode = get_story_features_parallel(data_path + 'odetostepfather.TextGrid',
+                                      layer)
     souls = get_story_features_parallel(data_path + 'souls.TextGrid', layer)
     undertheinfluence = get_story_features_parallel(data_path +
-                                           'undertheinfluence.TextGrid', layer)
+                                                    'undertheinfluence.TextGrid', layer)
 
     # Project features into opposite space
     alternateithicatom_transformed = np.dot(alternateithicatom,
