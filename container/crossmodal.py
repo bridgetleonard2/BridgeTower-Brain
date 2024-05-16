@@ -376,80 +376,94 @@ def alignment(layer):
         Array of shape (layer_output_size, layer_output_size) mapping
             the relationship of caption features to image features.
     """
-    print("Starting feature alignment")
-    # Stream the dataset so it doesn't download to device
-    test_dataset = load_dataset("nlphuji/flickr30k", split='test',
-                                streaming=True)
+    # Check if alignment is already done
+    try:
+        coef_images_to_captions = np.load('results/alignment/layer_{layer}/'
+                                          'coef_images_to_captions.npy')
+        coef_captions_to_images = np.load('results/alignment/layer_{layer}/'
+                                          'coef_captions_to_images.npy')
+        print("Alignment already done, retrieving coefficients")
+    except FileNotFoundError:
+        print("Starting feature alignment")
+        # Stream the dataset so it doesn't download to device
+        test_dataset = load_dataset("nlphuji/flickr30k", split='test',
+                                    streaming=True)
 
-    # Define Model
-    device, model, processor, features, layer_selected = setup_model(layer)
+        # Define Model
+        device, model, processor, features, layer_selected = setup_model(layer)
 
-    data = []
+        data = []
 
-    print("Running flickr through model")
-    # Assuming 'test_dataset' is an IterableDataset from a streaming source
-    for item in tqdm(test_dataset):
-        # Access data directly from the item, no need for indexing
-        image = item['image']
-        image_array = np.array(image)
-        caption = " ".join(item['caption'])
+        print("Running flickr through model")
+        # Assuming 'test_dataset' is an IterableDataset from a streaming source
+        for item in tqdm(test_dataset):
+            # Access data directly from the item, no need for indexing
+            image = item['image']
+            image_array = np.array(image)
+            caption = " ".join(item['caption'])
 
-        # Run image
-        image_input = processor(image_array, "", return_tensors="pt")
-        image_input = {key: value.to(device)
-                       for key, value in image_input.items()}
+            # Run image
+            image_input = processor(image_array, "", return_tensors="pt")
+            image_input = {key: value.to(device)
+                           for key, value in image_input.items()}
 
-        _ = model(**image_input)
-        image_vector = features[f'layer_{layer}']
+            _ = model(**image_input)
+            image_vector = features[f'layer_{layer}']
 
-        # Run caption
-        # Create a numpy array filled with gray values (128 in this case)
-        # This will act as the zero image input
-        gray_value = 128
-        gray_image_array = np.full((512, 512, 3), gray_value, dtype=np.uint8)
+            # Run caption
+            # Create a numpy array filled with gray values (128 in this case)
+            # This will act as the zero image input
+            gray_value = 128
+            gray_image_array = np.full((512, 512, 3), gray_value,
+                                       dtype=np.uint8)
 
-        caption_input = processor(gray_image_array, caption,
-                                  return_tensors="pt")
-        caption_input = {key: value.to(device)
-                         for key, value in caption_input.items()}
-        _ = model(**caption_input)
+            caption_input = processor(gray_image_array, caption,
+                                      return_tensors="pt")
+            caption_input = {key: value.to(device)
+                             for key, value in caption_input.items()}
+            _ = model(**caption_input)
 
-        caption_vector = features[f'layer_{layer}']
+            caption_vector = features[f'layer_{layer}']
 
-        data.append([image_vector.detach().cpu().numpy(),
-                     caption_vector.detach().cpu().numpy()])
+            data.append([image_vector.detach().cpu().numpy(),
+                        caption_vector.detach().cpu().numpy()])
 
-    # Run encoding model
-    backend = set_backend("torch_cuda", on_error="warn")
-    print(backend)
+        # Run encoding model
+        backend = set_backend("torch_cuda", on_error="warn")
+        print(backend)
 
-    data = np.array(data)
-    # Test data
-    print(data.shape)
-    # Variables
-    captions = data[:, 1, :]
-    images = data[:, 0, :]
+        data = np.array(data)
+        # Test data
+        print(data.shape)
+        # Variables
+        captions = data[:, 1, :]
+        images = data[:, 0, :]
 
-    alphas = np.logspace(1, 20, 20)
-    scaler = StandardScaler(with_mean=True, with_std=False)
+        alphas = np.logspace(1, 20, 20)
+        scaler = StandardScaler(with_mean=True, with_std=False)
 
-    ridge_cv = RidgeCV(
-        alphas=alphas, cv=5,
-        solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
-                           n_targets_batch_refit=100))
+        ridge_cv = RidgeCV(
+            alphas=alphas, cv=5,
+            solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
+                               n_targets_batch_refit=100))
 
-    pipeline = make_pipeline(
-        scaler,
-        ridge_cv
-    )
+        pipeline = make_pipeline(
+            scaler,
+            ridge_cv
+        )
 
-    _ = pipeline.fit(images, captions)
-    coef_images_to_captions = backend.to_numpy(pipeline[-1].coef_)
+        _ = pipeline.fit(images, captions)
+        coef_images_to_captions = backend.to_numpy(pipeline[-1].coef_)
 
-    _ = pipeline.fit(captions, images)
-    coef_captions_to_images = backend.to_numpy(pipeline[-1].coef_)
+        _ = pipeline.fit(captions, images)
+        coef_captions_to_images = backend.to_numpy(pipeline[-1].coef_)
 
-    print("Finished feature alignment")
+        print("Finished feature alignment, saving coefficients")
+        # Save coefficients
+        np.save('results/alignment/layer_{layer}/coef_images_to_captions.npy',
+                coef_images_to_captions)
+        np.save('results/alignment/layer_{layer}/coef_captions_to_images.npy',
+                coef_captions_to_images)
     return coef_images_to_captions, coef_captions_to_images
 
 
