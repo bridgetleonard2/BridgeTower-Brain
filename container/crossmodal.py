@@ -976,7 +976,7 @@ if __name__ == "__main__":
                                             vision_encoding_matrix)
 
             np.save(correlations, 'results/movie_to_story/' + subject +
-                    '/layer' + layer + '_correlations.npy')
+                    '/layer' + str(layer) + '_correlations.npy')
 
         elif modality == "language":
             print("Building language model")
@@ -989,7 +989,7 @@ if __name__ == "__main__":
                                              language_encoding_model)
 
             np.save(correlations, 'results/story_to_movie/' + subject +
-                    '/layer' + layer + '_correlations.npy')
+                    '/layer' + str(layer) + '_correlations.npy')
 
     else:
         print("This script requires exactly two arguments: subject, modality, \
