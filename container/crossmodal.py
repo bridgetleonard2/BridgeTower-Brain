@@ -378,9 +378,9 @@ def alignment(layer):
     """
     # Check if alignment is already done
     try:
-        coef_images_to_captions = np.load('results/alignment/layer_{layer}/'
+        coef_images_to_captions = np.load(f'results/alignment/layer_{layer}/'
                                           'coef_images_to_captions.npy')
-        coef_captions_to_images = np.load('results/alignment/layer_{layer}/'
+        coef_captions_to_images = np.load(f'results/alignment/layer_{layer}/'
                                           'coef_captions_to_images.npy')
         print("Alignment already done, retrieving coefficients")
     except FileNotFoundError:
@@ -460,9 +460,9 @@ def alignment(layer):
 
         print("Finished feature alignment, saving coefficients")
         # Save coefficients
-        np.save('results/alignment/layer_{layer}/coef_images_to_captions.npy',
+        np.save(f'results/alignment/layer_{layer}/coef_images_to_captions.npy',
                 coef_images_to_captions)
-        np.save('results/alignment/layer_{layer}/coef_captions_to_images.npy',
+        np.save(f'results/alignment/layer_{layer}/coef_captions_to_images.npy',
                 coef_captions_to_images)
     return coef_images_to_captions, coef_captions_to_images
 
