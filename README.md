@@ -19,8 +19,8 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
 ## Key Objectives
 
 - **Replication:** Reimplementing the experiments conducted by the Huth Lab to verify the robustness of their findings.
-- **Extension:** Expanding upon the replicated work to delve deeper into the neural representations and their predictive power.
-- **Innovation:** Introducing novel approaches and methodologies to push the boundaries of what is currently understood about the relationship between neural networks and human cognitive processes.
+- **Extension:** Throughout replication, develop a GPU-accelerated pipeline to extract features using BridgeTower, build voxelwise encoding models with features and fMRI data, and predict unseen brain responses with the encoding models.
+- **Innovation:** Generalize this tool so it can be used for other multimodal models to compare and contrast neural network representations with human brain representations.
 
 ## Project Structure
 
