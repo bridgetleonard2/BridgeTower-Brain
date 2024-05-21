@@ -955,6 +955,7 @@ def movie_predictions(subject, layer, language_encoding_model):
                                  correlations_test))
 
     correlations = np.nanmean(all_correlations, axis=0)
+    print('max correlation', np.nanmax(correlations))
 
     return correlations
 
