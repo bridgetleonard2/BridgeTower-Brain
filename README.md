@@ -23,20 +23,20 @@ This project begins by replicating the Huth Lab's recent findings, serving as a 
 - **Innovation:** Generalize this tool so it can be used for other multimodal models to compare and contrast neural network representations with human brain representations.
 
 ## Project Structure
-- **Container:**
+- **container:**
    - crossmodal.py: runs a specific subject and layer through the pipeline with GPU-acceleration
    - cuda_crossmodal.def: an Apptainer definition file to create a container with the dependencies needed to run voxelwise encoding models on an HPC server
    - functions.py: helper functions imported in crossmodal.py
    - visualize_correlations.py: the final step in the pipeline run locally (or where matplotlib is accessible) to create flatmaps of the results
-- **data** Contains the datasets used for training and evaluation.
-   - raw_stimuli: *Must download from outside repository, instructions under `Getting Started` and .md file in data directory*. Contains repositories from past experiments including `shortclips`: [a dataset created from a movie watching experiment](https://doi.gin.g-node.org/10.12751/g-node.vy1zjd/), `textgrids`: [a dataset created from a story listening experiment](https://www.nature.com/articles/s41597-023-02437-z), and `test_data` for a BridgeTower introduction.
-   - fmri_data: *Must download from outside repository, instructions under `Getting Started` and .md file in data directory*. Contains the corresponding fMRI data for the shortclips and textgrids stimuli.
-   - intro_data: Contains data for bridgetower_introduction (the first notebook tutorial). Uses images, videos, captions from outside datasets to investigate the architecture of BridgeTower.
-- **docs**: contains data_sources.md which details getting the necessary data above
-- **literature**: contains the paper aimed to be replicated, model paper, and other relevant past findings
-- **Results:**
-   - movie_to_story: Contains subject-level results of movie --> story predictions including the output correlations between model predictions and real fMRI data as well as flatmap visuals
-   - story_to_movie: Contains subject-level results of story --> movie predictions including the output correlations between model predictions and real fMRI data as well as flatmap visuals
+- **data:** contains the datasets used for training and evaluation.
+   - raw_stimuli: *must download from outside repository, instructions under `Getting Started` and .md file in data directory*. Contains repositories from past experiments including `shortclips`: [a dataset created from a movie watching experiment](https://doi.gin.g-node.org/10.12751/g-node.vy1zjd/), `textgrids`: [a dataset created from a story listening experiment](https://www.nature.com/articles/s41597-023-02437-z), and `test_data` for a BridgeTower introduction.
+   - fmri_data: *must download from outside repository, instructions under `Getting Started` and .md file in data directory*. Contains the corresponding fMRI data for the shortclips and textgrids stimuli.
+   - intro_data: contains data for bridgetower_introduction (the first notebook tutorial). Uses images, videos, captions from outside datasets to investigate the architecture of BridgeTower.
+- **docs:** contains data_sources.md which details getting the necessary data above
+- **literature:** contains the paper aimed to be replicated, model paper, and other relevant past findings
+- **results:**
+   - movie_to_story: contains subject-level results of movie --> story predictions including the output correlations between model predictions and real fMRI data as well as flatmap visuals
+   - story_to_movie: contains subject-level results of story --> movie predictions including the output correlations between model predictions and real fMRI data as well as flatmap visuals
 - **Notebooks:** Jupyter notebooks detailing the step-by-step process of replication and subsequent investigations.
 
 ## Results
