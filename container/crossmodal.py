@@ -439,7 +439,7 @@ def alignment(layer):
         captions = data[:, 1, :]
         images = data[:, 0, :]
 
-        alphas = np.logspace(1, 20, 20)
+        alphas = np.logspace(-6, 6, 50)  # alphas = np.logspace(1, 20, 20)
         scaler = StandardScaler(with_mean=True, with_std=False)
 
         ridge_cv = RidgeCV(
@@ -566,19 +566,12 @@ def vision_model(subject, layer):
 
     _ = pipeline.fit(X_train, Y_train)
 
-    # # Calculate scores
-    # scores = pipeline.score(X_test, Y_test)
-    # print("(n_voxels,) =", scores.shape)
-    # scores = backend.to_numpy(scores)
-
-    # best_alphas = backend.to_numpy(pipeline[-1].best_alphas_)
     coef = pipeline[-1].coef_
     coef = backend.to_numpy(coef)
     print("(n_delays * n_features, n_voxels) =", coef.shape)
 
     # Regularize coefficients
     coef /= np.linalg.norm(coef, axis=0)[None]
-    # coef *= np.sqrt(np.maximum(0, scores))[None]
 
     # split the ridge coefficients per delays
     delayer = pipeline.named_steps['delayer']
