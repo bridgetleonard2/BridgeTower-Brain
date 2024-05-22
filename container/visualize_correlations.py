@@ -2,6 +2,9 @@ import numpy as np
 from scipy.sparse import load_npz
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import nibabel as nib
+from nilearn.datasets import load_mni152_template
+from nilearn.image import resample_to_img
 import sys
 
 
@@ -115,8 +118,15 @@ def create_flatmap(subject, layer, correlation_path, modality):
     plt.show()
 
 
-def create_3d_volume_plot(subject, layer, correlation_path, modality):
-    """Function to create a 3D volume plot of reconstructed correlations."""
+def transform_to_mni(coords, affine):
+    """Transform coordinates to MNI space using the affine matrix."""
+    coords_homogeneous = np.c_[coords, np.ones((coords.shape[0], 1))]
+    mni_coords = coords_homogeneous.dot(affine.T)[:, :3]
+    return mni_coords
+
+
+def create_3d_mni_plot(subject, layer, correlation_path, modality):
+    """Function to create a 3D volume plot of reconstructed correlations in MNI space."""
 
     # Load correlations
     correlations = np.load(correlation_path)
@@ -152,11 +162,21 @@ def create_3d_volume_plot(subject, layer, correlation_path, modality):
     z = z[valid_mask]
     values = values[valid_mask]
 
+    # Stack coordinates
+    coords = np.vstack((x, y, z)).T
+
+    # Load the MNI template
+    mni_template = load_mni152_template()
+    mni_affine = mni_template.affine
+
+    # Transform coordinates to MNI space
+    mni_coords = transform_to_mni(coords, mni_affine)
+
     # Create the 3D scatter plot
     fig = go.Figure(data=go.Scatter3d(
-        x=x,
-        y=y,
-        z=z,
+        x=mni_coords[:, 0],
+        y=mni_coords[:, 1],
+        z=mni_coords[:, 2],
         mode='markers',
         marker=dict(
             size=3,
@@ -169,7 +189,7 @@ def create_3d_volume_plot(subject, layer, correlation_path, modality):
     ))
 
     fig.update_layout(
-        title=f"3D Volume Plot for {subject}",
+        title=f"3D MNI Volume Plot for {subject}",
         scene=dict(
             xaxis_title='X',
             yaxis_title='Y',
@@ -193,7 +213,7 @@ if __name__ == "__main__":
         layer = sys.argv[3]
         correlation_path = sys.argv[4]
         # create_flatmap(subject, layer, correlation_path, modality)
-        create_3d_volume_plot(subject, layer, correlation_path, modality)
+        create_3d_mni_plot(subject, layer, correlation_path, modality)
     else:
         print("Please provide the subject, modality, layer, and correlation \
               path. Usage: python visualize_correlations.py <subject> \
