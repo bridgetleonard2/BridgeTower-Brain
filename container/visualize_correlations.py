@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.sparse import load_npz
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import sys
 
 
@@ -114,13 +115,85 @@ def create_flatmap(subject, layer, correlation_path, modality):
     plt.show()
 
 
+def create_3d_volume_plot(subject, layer, correlation_path, modality):
+    """Function to create a 3D volume plot of reconstructed correlations."""
+
+    # Load correlations
+    correlations = np.load(correlation_path)
+
+    # Reverse flattening and masking
+    fmri_alternateithicatom = np.load("data/fmri_data/storydata/" + subject +
+                                      "/alternateithicatom.npy")
+
+    mask = ~np.isnan(fmri_alternateithicatom[0])  # reference for the mask
+    # Initialize an empty 3D array with NaNs for the correlation data
+    reconstructed_correlations = np.full((31, 100, 100), np.nan)
+
+    # Flatten the mask to get the indices of the non-NaN data points
+    valid_indices = np.where(mask.flatten())[0]
+
+    # Assign the correlation coefficients to their original spatial positions
+    for index, corr_value in zip(valid_indices, correlations):
+        # Convert the 1D index back to 3D index in the spatial dimensions
+        z, x, y = np.unravel_index(index, (31, 100, 100))
+        reconstructed_correlations[z, x, y] = corr_value
+
+    # Prepare the data for plotting
+    x, y, z = np.indices(reconstructed_correlations.shape)
+    x = x.flatten()
+    y = y.flatten()
+    z = z.flatten()
+    values = reconstructed_correlations.flatten()
+
+    # Create a mask for valid (non-NaN) values
+    valid_mask = ~np.isnan(values)
+    x = x[valid_mask]
+    y = y[valid_mask]
+    z = z[valid_mask]
+    values = values[valid_mask]
+
+    # Create the 3D scatter plot
+    fig = go.Figure(data=go.Scatter3d(
+        x=x,
+        y=y,
+        z=z,
+        mode='markers',
+        marker=dict(
+            size=3,
+            color=values,
+            colorscale='RdBu_r',
+            cmin=-0.1,
+            cmax=0.1,
+            opacity=0.8
+        )
+    ))
+
+    fig.update_layout(
+        title=f"3D Volume Plot for {subject}",
+        scene=dict(
+            xaxis_title='X',
+            yaxis_title='Y',
+            zaxis_title='Z'
+        ),
+        coloraxis_colorbar=dict(
+            title="Correlation",
+            ticks="outside",
+            tickvals=[-0.1, 0.1],
+            ticktext=[-0.1, 0.1]
+        )
+    )
+
+    fig.show()
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 5:
         subject = sys.argv[1]
         modality = sys.argv[2]
         layer = sys.argv[3]
         correlation_path = sys.argv[4]
-        create_flatmap(subject, layer, correlation_path, modality)
+        # create_flatmap(subject, layer, correlation_path, modality)
+        create_3d_volume_plot(subject, layer, correlation_path, modality)
     else:
         print("Please provide the subject, modality, layer, and correlation \
               path. Usage: python visualize_correlations.py <subject> \
