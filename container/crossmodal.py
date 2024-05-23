@@ -439,7 +439,7 @@ def alignment(layer):
         captions = data[:, 1, :]
         images = data[:, 0, :]
 
-        alphas = np.logspace(-6, 6, 50)  # alphas = np.logspace(1, 20, 20)
+        alphas = np.logspace(1, 20, 20)
         scaler = StandardScaler(with_mean=True, with_std=False)
 
         ridge_cv = RidgeCV(
@@ -454,9 +454,13 @@ def alignment(layer):
 
         _ = pipeline.fit(images, captions)
         coef_images_to_captions = backend.to_numpy(pipeline[-1].coef_)
+        coef_images_to_captions /= np.linalg.norm(coef_images_to_captions,
+                                                  axis=0)[None]
 
         _ = pipeline.fit(captions, images)
         coef_captions_to_images = backend.to_numpy(pipeline[-1].coef_)
+        coef_captions_to_images /= np.linalg.norm(coef_captions_to_images,
+                                                  axis=0)[None]
 
         print("Finished feature alignment, saving coefficients")
         # Save coefficients
