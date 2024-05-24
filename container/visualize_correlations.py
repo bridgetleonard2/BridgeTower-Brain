@@ -2,9 +2,8 @@ import numpy as np
 from scipy.sparse import load_npz
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import nibabel as nib
 from nilearn.datasets import load_mni152_template
-from nilearn.image import resample_to_img
+
 import sys
 
 
@@ -126,7 +125,8 @@ def transform_to_mni(coords, affine):
 
 
 def create_3d_mni_plot(subject, layer, correlation_path, modality):
-    """Function to create a 3D volume plot of reconstructed correlations in MNI space."""
+    """Function to create a 3D volume plot of reconstructed correlations
+    in MNI space."""
 
     # Load correlations
     correlations = np.load(correlation_path)
@@ -213,7 +213,7 @@ if __name__ == "__main__":
         layer = sys.argv[3]
         correlation_path = sys.argv[4]
         create_flatmap(subject, layer, correlation_path, modality)
-        # create_3d_mni_plot(subject, layer, correlation_path, modality)
+        create_3d_mni_plot(subject, layer, correlation_path, modality)
     else:
         print("Please provide the subject, modality, layer, and correlation \
               path. Usage: python visualize_correlations.py <subject> \
