@@ -440,7 +440,7 @@ def alignment(layer):
         images = data[:, 0, :]
 
         alphas = np.logspace(1, 20, 20)
-        scaler = StandardScaler(with_mean=True, with_std=False)
+        # scaler = StandardScaler(with_mean=True, with_std=False)
 
         ridge_cv = RidgeCV(
             alphas=alphas, cv=5,
@@ -448,7 +448,7 @@ def alignment(layer):
                                n_targets_batch_refit=100))
 
         pipeline = make_pipeline(
-            scaler,
+            # scaler,
             ridge_cv
         )
 
