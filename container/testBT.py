@@ -8,6 +8,7 @@ import os
 import torch
 from torch.nn.functional import pad
 import h5py
+from PIL import Image  # add PIL to container definition
 
 # Ridge regression
 from himalaya.ridge import RidgeCV
@@ -375,11 +376,16 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
     data = {}
 
     # Get face features
-    for i, image in enumerate(os.listdir(data_path)):
-        model_input = processor(image, "", return_tensors="pt")
-        # Assuming model_input is a dictionary of tensors
-        model_input = {key: value.to(device) for key,
-                       value in model_input.items()}
+    for i, image_filename in enumerate(os.listdir(data_path)):
+        # Load image as PIL
+        if image_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+            image_path = os.path.join(data_path, image_filename)
+            try:
+                image = Image.open(image_path).convert('RGB')
+                model_input = processor(image, "", return_tensors="pt")
+                model_input = {key: value.to(device) for key, value in model_input.items()}
+            except Exception as e:
+                print(f"Failed to process {image_filename}: {str(e)}")
 
         _ = model(**model_input)
 
@@ -414,7 +420,7 @@ if __name__ == "__main__":
 
         print("Predicting fMRI data and calculating correlations")
         # Predict story fmri with vision model
-        prediction = fmri_prediction(subject, layer, modality,
+        prediction = fmri_prediction(subject, modality, layer,
                                      vision_encoding_matrix)
 
         np.save('results/faces/' + subject +
