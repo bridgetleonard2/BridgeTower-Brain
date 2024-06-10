@@ -1,7 +1,7 @@
 # Basics
 import numpy as np
 import sys
-import re
+# import re
 import os
 
 # Data loading
@@ -239,104 +239,112 @@ def vision_model(subject, layer):
         the relationship of delayed feature vectors to each voxel
         in the fmri data.
     """
-    data_path = 'data/raw_stimuli/shortclips/stimuli/'
-    print("Extracting features from data")
+    try:
+        average_coef = np.load('results/vision_encoding/' + subject +
+                               '/layer' + str(layer) + '_encoding_model.npy')
+        print("Vision encoding model already exists")
+    except FileNotFoundError:
+        data_path = 'data/raw_stimuli/shortclips/stimuli/'
+        print("Extracting features from data")
 
-    # Extract features from raw stimuli
-    train00 = get_movie_features(data_path + 'train_00.hdf', layer)
-    train01 = get_movie_features(data_path + 'train_01.hdf', layer)
-    train02 = get_movie_features(data_path + 'train_02.hdf', layer)
-    train03 = get_movie_features(data_path + 'train_03.hdf', layer)
-    train04 = get_movie_features(data_path + 'train_04.hdf', layer)
-    train05 = get_movie_features(data_path + 'train_05.hdf', layer)
-    train06 = get_movie_features(data_path + 'train_06.hdf', layer)
-    train07 = get_movie_features(data_path + 'train_07.hdf', layer)
-    train08 = get_movie_features(data_path + 'train_08.hdf', layer)
-    train09 = get_movie_features(data_path + 'train_09.hdf', layer)
-    train10 = get_movie_features(data_path + 'train_10.hdf', layer)
-    train11 = get_movie_features(data_path + 'train_11.hdf', layer)
-    test = get_movie_features(data_path + 'test.hdf', layer)
+        # Extract features from raw stimuli
+        train00 = get_movie_features(data_path + 'train_00.hdf', layer)
+        train01 = get_movie_features(data_path + 'train_01.hdf', layer)
+        train02 = get_movie_features(data_path + 'train_02.hdf', layer)
+        train03 = get_movie_features(data_path + 'train_03.hdf', layer)
+        train04 = get_movie_features(data_path + 'train_04.hdf', layer)
+        train05 = get_movie_features(data_path + 'train_05.hdf', layer)
+        train06 = get_movie_features(data_path + 'train_06.hdf', layer)
+        train07 = get_movie_features(data_path + 'train_07.hdf', layer)
+        train08 = get_movie_features(data_path + 'train_08.hdf', layer)
+        train09 = get_movie_features(data_path + 'train_09.hdf', layer)
+        train10 = get_movie_features(data_path + 'train_10.hdf', layer)
+        train11 = get_movie_features(data_path + 'train_11.hdf', layer)
+        test = get_movie_features(data_path + 'test.hdf', layer)
 
-    # Build encoding model
-    print("Loading movie fMRI data")
-    # Load fMRI data
-    # Using all data for cross-modality encoding model
-    fmri_train = np.load("data/moviedata/" + subject + "/train.npy")
-    fmri_test = np.load("data/moviedata/" + subject + "/test.npy")
+        # Build encoding model
+        print("Loading movie fMRI data")
+        # Load fMRI data
+        # Using all data for cross-modality encoding model
+        fmri_train = np.load("data/moviedata/" + subject + "/train.npy")
+        fmri_test = np.load("data/moviedata/" + subject + "/test.npy")
 
-    # Prep data
-    train_fmri = remove_nan(fmri_train)
-    test_fmri = remove_nan(fmri_test)
+        # Prep data
+        train_fmri = remove_nan(fmri_train)
+        test_fmri = remove_nan(fmri_test)
 
-    fmri_arrays = [train_fmri, test_fmri]
-    feature_arrays = [train00, train01, train02, train03, train04,
-                      train05, train06, train07, train08, train09,
-                      train10, train11, test]
+        fmri_arrays = [train_fmri, test_fmri]
+        feature_arrays = [train00, train01, train02, train03, train04,
+                          train05, train06, train07, train08, train09,
+                          train10, train11, test]
 
-    # Combine data
-    Y_train = np.vstack(fmri_arrays)
-    X_train = np.vstack(feature_arrays)
+        # Combine data
+        Y_train = np.vstack(fmri_arrays)
+        X_train = np.vstack(feature_arrays)
 
-    # Define cross-validation
-    run_onsets = []
-    current_index = 0
-    for arr in feature_arrays:
-        next_index = current_index + arr.shape[0]
-        run_onsets.append(current_index)
-        current_index = next_index
+        # Define cross-validation
+        run_onsets = []
+        current_index = 0
+        for arr in feature_arrays:
+            next_index = current_index + arr.shape[0]
+            run_onsets.append(current_index)
+            current_index = next_index
 
-    n_samples_train = X_train.shape[0]
-    cv = generate_leave_one_run_out(n_samples_train, run_onsets)
-    cv = check_cv(cv)  # cross-validation splitter into a reusable list
+        n_samples_train = X_train.shape[0]
+        cv = generate_leave_one_run_out(n_samples_train, run_onsets)
+        cv = check_cv(cv)  # cross-validation splitter into a reusable list
 
-    # Define the model
-    scaler = StandardScaler(with_mean=True, with_std=False)
+        # Define the model
+        scaler = StandardScaler(with_mean=True, with_std=False)
 
-    delayer = Delayer(delays=[1, 2, 3, 4])
+        delayer = Delayer(delays=[1, 2, 3, 4])
 
-    backend = set_backend("torch_cuda", on_error="warn")
-    print(backend)
+        backend = set_backend("torch_cuda", on_error="warn")
+        print(backend)
 
-    X_train = X_train.astype("float32")
+        X_train = X_train.astype("float32")
 
-    alphas = np.logspace(1, 20, 20)
+        alphas = np.logspace(1, 20, 20)
 
-    print("Running linear model")
-    ridge_cv = RidgeCV(
-        alphas=alphas, cv=cv,
-        solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
-                           n_targets_batch_refit=100))
+        print("Running linear model")
+        ridge_cv = RidgeCV(
+            alphas=alphas, cv=cv,
+            solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
+                               n_targets_batch_refit=100))
 
-    pipeline = make_pipeline(
-        scaler,
-        delayer,
-        ridge_cv,
-    )
+        pipeline = make_pipeline(
+            scaler,
+            delayer,
+            ridge_cv,
+        )
 
-    set_config(display='diagram')  # requires scikit-learn 0.23
-    pipeline
+        set_config(display='diagram')  # requires scikit-learn 0.23
+        pipeline
 
-    _ = pipeline.fit(X_train, Y_train)
+        _ = pipeline.fit(X_train, Y_train)
 
-    coef = pipeline[-1].coef_
-    coef = backend.to_numpy(coef)
-    print("(n_delays * n_features, n_voxels) =", coef.shape)
+        coef = pipeline[-1].coef_
+        coef = backend.to_numpy(coef)
+        print("(n_delays * n_features, n_voxels) =", coef.shape)
 
-    # Regularize coefficients
-    coef /= np.linalg.norm(coef, axis=0)[None]
+        # Regularize coefficients
+        coef /= np.linalg.norm(coef, axis=0)[None]
 
-    # split the ridge coefficients per delays
-    delayer = pipeline.named_steps['delayer']
-    coef_per_delay = delayer.reshape_by_delays(coef, axis=0)
-    print("(n_delays, n_features, n_voxels) =", coef_per_delay.shape)
-    del coef
+        # split the ridge coefficients per delays
+        delayer = pipeline.named_steps['delayer']
+        coef_per_delay = delayer.reshape_by_delays(coef, axis=0)
+        print("(n_delays, n_features, n_voxels) =", coef_per_delay.shape)
+        del coef
 
-    # average over delays
-    average_coef = np.mean(coef_per_delay, axis=0)
-    print("(n_features, n_voxels) =", average_coef.shape)
-    del coef_per_delay
+        # average over delays
+        average_coef = np.mean(coef_per_delay, axis=0)
+        print("(n_features, n_voxels) =", average_coef.shape)
+        del coef_per_delay
 
-    print("Finished vision encoding model")
+        print("Finished vision encoding model")
+        # Save encoding model
+        np.save('results/vision_encoding/' + subject +
+                '/layer' + str(layer) + '_encoding_model.npy', average_coef)
     return average_coef
 
 
@@ -378,12 +386,14 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
     # Get face features
     for i, image_filename in enumerate(os.listdir(data_path)):
         # Load image as PIL
-        if image_filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+        if image_filename.lower().endswith(('.png', '.jpg', '.jpeg',
+                                            '.bmp', '.gif')):
             image_path = os.path.join(data_path, image_filename)
             try:
                 image = Image.open(image_path).convert('RGB')
                 model_input = processor(image, "", return_tensors="pt")
-                model_input = {key: value.to(device) for key, value in model_input.items()}
+                model_input = {key: value.to(device) for
+                               key, value in model_input.items()}
             except Exception as e:
                 print(f"Failed to process {image_filename}: {str(e)}")
 
@@ -392,7 +402,9 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
         for name, tensor in features.items():
             if name not in data:
                 data[name] = []
-            data[name].append(tensor)
+            numpy_tensor = tensor.detach().cpu().numpy()
+
+            data[name].append(numpy_tensor)
 
         layer_selected.remove()
 
@@ -427,5 +439,5 @@ if __name__ == "__main__":
                 '/layer' + str(layer) + '_predictions.npy', prediction)
 
     else:
-        print("This script requires exactly three arguments: subject, modality, \
-               and layer. Ex. python testBT.py S1 face 1")
+        print("This script requires exactly three arguments: subject, \
+              modality, and layer. Ex. python testBT.py S1 face 1")
