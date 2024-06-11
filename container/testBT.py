@@ -341,6 +341,9 @@ def vision_model(subject, layer):
         print("(n_features, n_voxels) =", average_coef.shape)
         del coef_per_delay
 
+        # Check shape
+        assert average_coef.shape == (X_train.shape[1] * 4, Y_train.shape[1])
+
         print("Finished vision encoding model")
         # Save encoding model
         np.save('results/vision_encoding/' + subject +
@@ -383,6 +386,7 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
     # Initiate data dict
     data = {}
 
+    print("number of images:", len(os.listdir(data_path)))
     # Get face features
     for i, image_filename in enumerate(os.listdir(data_path)):
         # Load image as PIL
@@ -414,8 +418,11 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
 
         return data
 
+    print('encoding matrix shape:', vision_encoding_matrix.shape)
+    print('data shape:', data.shape)
     # Make fmri predictions
     fmri_predictions = np.dot(data, vision_encoding_matrix)
+    print('predictions shape:', fmri_predictions.shape)
 
     return fmri_predictions
 
