@@ -341,13 +341,14 @@ def vision_model(subject, layer):
         print("(n_features, n_voxels) =", average_coef.shape)
         del coef_per_delay
 
-        # Check shape
-        assert average_coef.shape == (X_train.shape[1] * 4, Y_train.shape[1])
-
         print("Finished vision encoding model")
         # Save encoding model
         np.save('results/vision_encoding/' + subject +
                 '/layer' + str(layer) + '_encoding_model.npy', average_coef)
+
+    print(average_coef.shape)
+    assert average_coef.shape == (X_train.shape[1] * 4, Y_train.shape[1])
+
     return average_coef
 
 
