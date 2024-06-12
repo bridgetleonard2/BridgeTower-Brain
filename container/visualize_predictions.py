@@ -7,7 +7,7 @@ from nilearn.datasets import load_mni152_template
 import sys
 
 
-def create_flatmap(subject, layer, modality, prediction_path):
+def create_flatmap(subject, layer, modality, prediction_path, top_pred=False):
     """Function to run the vision encoding model. Predicts brain activity
     to story listening and return predictions between predictions and real
     brain activity.
@@ -34,6 +34,13 @@ def create_flatmap(subject, layer, modality, prediction_path):
     """
     # Load predictions
     predictions = np.load(prediction_path)
+
+    # if top_pred is True, only plot the top 1% and bottom 1% of 
+    # predictions, rest become 0
+    if top_pred is True:
+        upper_pred = np.percentile(predictions, 97)
+        bottom_pred = np.percentile(predictions, 3)
+        predictions[(predictions > bottom_pred) & (predictions < upper_pred)] = 0
 
     # Reverse flattening and masking
     fmri_alternateithicatom = np.load("data/fmri_data/storydata/" + subject +
@@ -67,13 +74,14 @@ def create_flatmap(subject, layer, modality, prediction_path):
     rh_vertex_coords = np.load("data/fmri_data/mappers/" + subject +
                                "_vertex_coords_rh.npy")
 
-    # vmin, vmax = -5, 5
+    vmin, vmax = -np.max(abs(predictions)), np.max(abs(predictions))
+
     fig, axs = plt.subplots(1, 2, figsize=(7, 4))
 
     # Plot the first flatmap
     sc1 = axs[0].scatter(lh_vertex_coords[:, 0], lh_vertex_coords[:, 1],
                          c=lh_vertex_prediction_data, cmap='RdBu_r',
-                         s=.005)  # vmin=vmin, vmax=vmax,
+                         vmin=vmin, vmax=vmax, s=.01)
     axs[0].set_aspect('equal', adjustable='box')  # Ensure equal scaling
     # axs[0].set_title('Left Hemisphere')
     axs[0].set_frame_on(False)
@@ -83,7 +91,7 @@ def create_flatmap(subject, layer, modality, prediction_path):
     # Plot the second flatmap
     _ = axs[1].scatter(rh_vertex_coords[:, 0], rh_vertex_coords[:, 1],
                        c=rh_vertex_prediction_data, cmap='RdBu_r',
-                       s=.005)  # vmin=vmin, vmax=vmax,
+                       vmin=vmin, vmax=vmax, s=.01)
     axs[1].set_aspect('equal', adjustable='box')  # Ensure equal scaling
     # axs[1].set_title('Right Hemisphere')
     axs[1].set_frame_on(False)
@@ -98,15 +106,17 @@ def create_flatmap(subject, layer, modality, prediction_path):
     cbar = fig.colorbar(sc1, cax=cbar_ax, orientation='horizontal')
 
     # Set the color bar to only display min and max values
-    # cbar.set_ticks([vmin, vmax])
-    # cbar.set_ticklabels([f'{vmin}', f'{vmax}'])
+    cbar.set_ticks([vmin, vmax])
+    cbar.set_ticklabels([f'{vmin:.2f}', f'{vmax:.2f}'])
 
     # Remove the color bar box
     cbar.outline.set_visible(False)
     plt.title(f'{subject}\n{modality} predictions')
 
-    plt.savefig('results/' + modality + '_check/' + subject + '/layer' +
-                layer + '_visual.png', format='png')
+    if top_pred is True:
+        plt.savefig(f'results/{modality}_check/{subject}/layer{layer}_visual_top.png', format='png')
+    else:
+        plt.savefig(f'results/{modality}_check/{subject}/layer{layer}_visual.png', format='png')
     plt.show()
 
 
@@ -205,7 +215,8 @@ if __name__ == "__main__":
         layer = sys.argv[2]
         modality = sys.argv[3]
         prediction_path = sys.argv[4]
-        create_flatmap(subject, layer, modality, prediction_path)
+        create_flatmap(subject, layer, modality,
+                       prediction_path)
         create_3d_mni_plot(subject, layer, prediction_path)
     else:
         print("Please provide the subject, layer, modality, and prediction \

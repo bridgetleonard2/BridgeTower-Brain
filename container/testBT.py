@@ -16,6 +16,7 @@ from himalaya.backend import set_backend
 from sklearn.model_selection import check_cv
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
+from sklearn.decomposition import PCA
 from sklearn import set_config
 
 # Model
@@ -216,6 +217,13 @@ def get_movie_features(movie_data, layer, n=30):
     data = np.array(data[f"layer_{layer}"])
     print("Got movie features")
 
+    # Data should be 2d of shape (n_images/n, num_features)
+    # if data is above 2d, flatten 2nd+ dimensions
+    if data.ndim > 2:
+        data = data.reshape(data.shape[0], -1)
+        pca = PCA(n_components=768)
+        data = pca.fit_transform(data)
+
     return data
 
 
@@ -249,6 +257,8 @@ def vision_model(subject, layer):
 
         # Extract features from raw stimuli
         train00 = get_movie_features(data_path + 'train_00.hdf', layer)
+        print("Feature data shape:", train00.shape)
+
         train01 = get_movie_features(data_path + 'train_01.hdf', layer)
         train02 = get_movie_features(data_path + 'train_02.hdf', layer)
         train03 = get_movie_features(data_path + 'train_03.hdf', layer)
