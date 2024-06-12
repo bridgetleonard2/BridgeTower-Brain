@@ -175,8 +175,8 @@ def create_3d_mni_plot(subject, layer, prediction_path):
             size=3,
             color=values,
             colorscale='RdBu_r',
-            cmin=-0.1,
-            cmax=0.1,
+            # cmin=-0.1,
+            # cmax=0.1,
             opacity=0.8
         )
     ))
@@ -191,8 +191,8 @@ def create_3d_mni_plot(subject, layer, prediction_path):
         coloraxis_colorbar=dict(
             title="prediction",
             ticks="outside",
-            tickvals=[-0.1, 0.1],
-            ticktext=[-0.1, 0.1]
+            # tickvals=[-0.1, 0.1],
+            # ticktext=[-0.1, 0.1]
         )
     )
 
