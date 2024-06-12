@@ -16,7 +16,6 @@ from himalaya.backend import set_backend
 from sklearn.model_selection import check_cv
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-from sklearn.decomposition import PCA
 from sklearn import set_config
 
 # Model
@@ -218,14 +217,9 @@ def get_movie_features(movie_data, layer, n=30):
     print("Got movie features")
 
     # Data should be 2d of shape (n_images/n, num_features)
-    # if data is above 2d, flatten 2nd+ dimensions
+    # if data is above 2d, average 2nd+ dimensions
     if data.ndim > 2:
-        reshaped_data = data.reshape(data.shape[0], -1)
-        print(reshaped_data)
-        pca = PCA(n_components=768, svd_solver='randomized')
-        reduced_data = pca.fit_transform(reshaped_data)
-
-        return reduced_data
+        data = np.mean(data, axis=1)
 
     return data
 
@@ -427,6 +421,12 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
 
     # Save data
     data = np.array(data[f"layer_{layer}"])
+
+    # Data should be 2d of shape (n_images/n, num_features)
+    # if data is above 2d, average 2nd+ dimensions
+    if data.ndim > 2:
+        data = np.mean(data, axis=1)
+
     print("Got face features")
 
     print('encoding matrix shape:', vision_encoding_matrix.shape)
@@ -460,7 +460,7 @@ if __name__ == "__main__":
         elif modality == 'landscape':
             np.save('results/landscapes/' + subject +
                     '/layer' + str(layer) + '_predictions.npy', prediction)
-    
+
     else:
         print("This script requires exactly three arguments: subject, \
               modality, and layer. Ex. python testBT.py S1 face 1")
