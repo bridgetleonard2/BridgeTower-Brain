@@ -208,7 +208,7 @@ if __name__ == "__main__":
         create_flatmap(subject, layer, modality, prediction_path)
         create_3d_mni_plot(subject, layer, prediction_path)
     else:
-        print("Please provide the subject, layer, and prediction \
+        print("Please provide the subject, layer, modality, and prediction \
               path. Usage: python visualize_predictions.py <subject> \
               <layer> <modality> <prediction_path>")
         sys.exit(1)
