@@ -127,12 +127,19 @@ def transform_to_mni(coords, affine):
     return mni_coords
 
 
-def create_3d_mni_plot(subject, layer, prediction_path):
+def create_3d_mni_plot(subject, layer, prediction_path, top_pred=False):
     """Function to create a 3D volume plot of reconstructed predictions
     in MNI space."""
 
     # Load predictions
     predictions = np.load(prediction_path)
+
+    # if top_pred is True, only plot the top 1% and bottom 1% of 
+    # predictions, rest become 0
+    if top_pred is True:
+        upper_pred = np.percentile(predictions, 97)
+        bottom_pred = np.percentile(predictions, 3)
+        predictions[(predictions > bottom_pred) & (predictions < upper_pred)] = 0
 
     # Reverse flattening and masking
     fmri_alternateithicatom = np.load("data/fmri_data/storydata/" + subject +
@@ -215,9 +222,9 @@ if __name__ == "__main__":
         layer = sys.argv[2]
         modality = sys.argv[3]
         prediction_path = sys.argv[4]
-        create_flatmap(subject, layer, modality,
-                       prediction_path)
-        create_3d_mni_plot(subject, layer, prediction_path)
+        #create_flatmap(subject, layer, modality,
+        #               prediction_path)
+        create_3d_mni_plot(subject, layer, prediction_path, top_pred=True)
     else:
         print("Please provide the subject, layer, modality, and prediction \
               path. Usage: python visualize_predictions.py <subject> \

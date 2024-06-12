@@ -220,9 +220,12 @@ def get_movie_features(movie_data, layer, n=30):
     # Data should be 2d of shape (n_images/n, num_features)
     # if data is above 2d, flatten 2nd+ dimensions
     if data.ndim > 2:
-        data = data.reshape(data.shape[0], -1)
-        pca = PCA(n_components=768)
-        data = pca.fit_transform(data)
+        reshaped_data = data.reshape(data.shape[0], -1)
+        print(reshaped_data)
+        pca = PCA(n_components=768, svd_solver='randomized')
+        reduced_data = pca.fit_transform(reshaped_data)
+
+        return reduced_data
 
     return data
 
