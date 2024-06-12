@@ -347,7 +347,6 @@ def vision_model(subject, layer):
                 '/layer' + str(layer) + '_encoding_model.npy', average_coef)
 
     print(average_coef.shape)
-    assert average_coef.shape == (X_train.shape[1] * 4, Y_train.shape[1])
 
     return average_coef
 
@@ -389,7 +388,7 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
 
     print("number of images:", len(os.listdir(data_path)))
     # Get face features
-    for i, image_filename in enumerate(os.listdir(data_path)):
+    for i, image_filename in tqdm(enumerate(os.listdir(data_path))):
         # Load image as PIL
         if image_filename.lower().endswith(('.png', '.jpg', '.jpeg',
                                             '.bmp', '.gif')):
@@ -413,11 +412,9 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
 
         layer_selected.remove()
 
-        # Save data
-        data = np.array(data[f"layer_{layer}"])
-        print("Got face features")
-
-        return data
+    # Save data
+    data = np.array(data[f"layer_{layer}"])
+    print("Got face features")
 
     print('encoding matrix shape:', vision_encoding_matrix.shape)
     print('data shape:', data.shape)
@@ -425,7 +422,8 @@ def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
     fmri_predictions = np.dot(data, vision_encoding_matrix)
     print('predictions shape:', fmri_predictions.shape)
 
-    return fmri_predictions
+    average_predictions = np.mean(fmri_predictions, axis=0)
+    return average_predictions
 
 
 if __name__ == "__main__":
@@ -443,9 +441,13 @@ if __name__ == "__main__":
         prediction = fmri_prediction(subject, modality, layer,
                                      vision_encoding_matrix)
 
-        np.save('results/faces/' + subject +
-                '/layer' + str(layer) + '_predictions.npy', prediction)
-
+        if modality == 'face':
+            np.save('results/faces/' + subject +
+                    '/layer' + str(layer) + '_predictions.npy', prediction)
+        elif modality == 'landscape':
+            np.save('results/landscapes/' + subject +
+                    '/layer' + str(layer) + '_predictions.npy', prediction)
+    
     else:
         print("This script requires exactly three arguments: subject, \
               modality, and layer. Ex. python testBT.py S1 face 1")
