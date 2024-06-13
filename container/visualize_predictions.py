@@ -7,7 +7,7 @@ from nilearn.datasets import load_mni152_template
 import sys
 
 
-def create_flatmap(subject, layer, modality, prediction_path, top_pred=False):
+def create_flatmap(subject, layer, modality, top_pred=False):
     """Function to run the vision encoding model. Predicts brain activity
     to story listening and return predictions between predictions and real
     brain activity.
@@ -33,7 +33,8 @@ def create_flatmap(subject, layer, modality, prediction_path, top_pred=False):
         Saves flatmap visualizations as pngs
     """
     # Load predictions
-    predictions = np.load(prediction_path)
+    predictions = np.load(f"results/{modality}_check/{subject}/" +
+                          f"layer{layer}_predictions.npy")
 
     # if top_pred is True, only plot the top 1% and bottom 1% of
     # predictions, rest become 0
@@ -130,12 +131,13 @@ def transform_to_mni(coords, affine):
     return mni_coords
 
 
-def create_3d_mni_plot(subject, layer, prediction_path, top_pred=False):
+def create_3d_mni_plot(subject, layer, modality, top_pred=False):
     """Function to create a 3D volume plot of reconstructed predictions
     in MNI space."""
 
     # Load predictions
-    predictions = np.load(prediction_path)
+    predictions = np.load(f"results/{modality}_check/{subject}/" +
+                          f"layer{layer}_predictions.npy")
 
     # if top_pred is True, only plot the top 1% and bottom 1% of
     # predictions, rest become 0
@@ -220,14 +222,112 @@ def create_3d_mni_plot(subject, layer, prediction_path, top_pred=False):
     fig.show()
 
 
+def compare_modalities(subject, layer, top_pred=False):
+    """Function to compare predictions between vision and language
+    """
+    # Load predictions
+    face_modality = np.load(f"results/face_check/{subject}/" +
+                            f"layer{layer}_predictions.npy")
+    landscape_modality = np.load(f"results/landscape_check/{subject}/" +
+                                 f"layer{layer}_predictions.npy")
+
+    # Subtract landscape from face
+    diff = face_modality - landscape_modality
+
+    if top_pred is True:
+        upper_pred = np.percentile(diff, 97)
+        bottom_pred = np.percentile(diff, 3)
+        diff[(diff > bottom_pred) & (diff < upper_pred)] = 0
+
+    # Visualize the difference
+    # Reverse flattening and masking
+    fmri_alternateithicatom = np.load("data/fmri_data/storydata/" + subject +
+                                      "/alternateithicatom.npy")
+
+    mask = ~np.isnan(fmri_alternateithicatom[0])  # reference for the mask
+    # Initialize an empty 3D array with NaNs for the diff data
+    reconstructed_diff = np.full((31, 100, 100), np.nan)
+
+    # Flatten the mask to get the indices of the non-NaN data points
+    valid_indices = np.where(mask.flatten())[0]
+
+    # Assign the diff coefficients to their original spatial positions
+    for index, pred_value in zip(valid_indices, diff):
+        # Convert the 1D index back to 3D index in the spatial dimensions
+        z, x, y = np.unravel_index(index, (31, 100, 100))
+        reconstructed_diff[z, x, y] = pred_value
+
+    flattened_diff = reconstructed_diff.flatten()
+
+    # Load mappers
+    lh_mapping_matrix = load_npz("data/fmri_data/mappers/" + subject +
+                                 "_listening_forVL_lh.npz")
+    lh_vertex_diff_data = lh_mapping_matrix.dot(flattened_diff)
+    lh_vertex_coords = np.load("data/fmri_data/mappers/" + subject +
+                               "_vertex_coords_lh.npy")
+
+    rh_mapping_matrix = load_npz("data/fmri_data/mappers/" + subject +
+                                 "_listening_forVL_rh.npz")
+    rh_vertex_diff_data = rh_mapping_matrix.dot(flattened_diff)
+    rh_vertex_coords = np.load("data/fmri_data/mappers/" + subject +
+                               "_vertex_coords_rh.npy")
+
+    vmin, vmax = -np.max(abs(diff)), np.max(abs(diff))
+
+    fig, axs = plt.subplots(1, 2, figsize=(7, 4))
+
+    # Plot the first flatmap
+    sc1 = axs[0].scatter(lh_vertex_coords[:, 0], lh_vertex_coords[:, 1],
+                         c=lh_vertex_diff_data, cmap='RdBu_r',
+                         vmin=vmin, vmax=vmax, s=.01)
+    axs[0].set_aspect('equal', adjustable='box')  # Ensure equal scaling
+    # axs[0].set_title('Left Hemisphere')
+    axs[0].set_frame_on(False)
+    axs[0].set_xticks([])  # Remove x-axis ticks
+    axs[0].set_yticks([])  # Remove y-axis ticks
+
+    # Plot the second flatmap
+    _ = axs[1].scatter(rh_vertex_coords[:, 0], rh_vertex_coords[:, 1],
+                       c=rh_vertex_diff_data, cmap='RdBu_r',
+                       vmin=vmin, vmax=vmax, s=.01)
+    axs[1].set_aspect('equal', adjustable='box')  # Ensure equal scaling
+    # axs[1].set_title('Right Hemisphere')
+    axs[1].set_frame_on(False)
+    axs[1].set_xticks([])  # Remove x-axis ticks
+    axs[1].set_yticks([])  # Remove y-axis ticks
+
+    # Adjust layout to make space for the top colorbar
+    plt.subplots_adjust(top=0.85, wspace=0)
+
+    # Add a single horizontal colorbar at the top
+    cbar_ax = fig.add_axes([0.25, 0.9, 0.5, 0.03])
+    cbar = fig.colorbar(sc1, cax=cbar_ax, orientation='horizontal')
+
+    # Set the color bar to only display min and max values
+    cbar.set_ticks([vmin, vmax])
+    cbar.set_ticklabels([f'{vmin:.2f}', f'{vmax:.2f}'])
+
+    # Remove the color bar box
+    cbar.outline.set_visible(False)
+    plt.title(f'{subject}\nFace - Landscape predictions')
+
+    if top_pred is True:
+        plt.savefig(f'results/face_check/{subject}/layer' +
+                    f'{layer}_FaceMinusLandscape_top.png', format='png')
+    else:
+        plt.savefig(f'results/face_check/{subject}/layer' +
+                    f'{layer}_FaceMinusLandscape.png', format='png')
+    plt.show()
+
+
 if __name__ == "__main__":
-    if len(sys.argv) == 5:
+    if len(sys.argv) == 4:
         subject = sys.argv[1]
         layer = sys.argv[2]
         modality = sys.argv[3]
-        prediction_path = sys.argv[4]
-        create_flatmap(subject, layer, modality, prediction_path)
-        create_3d_mni_plot(subject, layer, prediction_path)
+        create_flatmap(subject, layer, modality)
+        create_3d_mni_plot(subject, layer, modality)
+        compare_modalities(subject, layer, top_pred=True)
     else:
         print("Please provide the subject, layer, modality, and prediction \
               path. Usage: python visualize_predictions.py <subject> \
