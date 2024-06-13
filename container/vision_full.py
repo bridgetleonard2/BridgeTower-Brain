@@ -323,7 +323,7 @@ def vision_model(subject, layer):
         # Define cross-validation
         run_onsets = []
         current_index = 0
-        for arr in feature_arrays:
+        for arr in X_train:
             next_index = current_index + arr.shape[0]
             run_onsets.append(current_index)
             current_index = next_index
