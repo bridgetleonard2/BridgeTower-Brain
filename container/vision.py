@@ -238,8 +238,8 @@ def vision_model(subject, layer):
         in the fmri data.
     """
     try:
-        average_coef = np.load('results/vision_encoding/' + subject +
-                               '/layer' + str(layer) + '_encoding_model.npy')
+        average_coef = np.load(f'results/vision_model_leaveOneOut/{subject}' +
+                               f'/layer{str(layer)}_test_encoding_model.npy')
         print("Vision encoding model already exists")
     except FileNotFoundError:
         data_path = 'data/raw_stimuli/shortclips/stimuli/'
@@ -398,8 +398,8 @@ if __name__ == "__main__":
         correlations = vision_prediction(subject, layer,
                                          vision_encoding_matrix)
 
-        np.save('results/vision_model/' + subject +
+        np.save('results/vision_mode/' + subject +
                 '/layer' + str(layer) + '_correlations.npy', correlations)
     else:
-        print("This script requires exactly two arguments: subject \
-               and layer. Ex. python crossmodal.py S1 1")
+        print("This script requires exactly two arguments: subject, modality, \
+               and layer. Ex. python crossmodal.py S1 vision 1")

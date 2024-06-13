@@ -73,7 +73,7 @@ def create_flatmap(subject, layer, correlation_path, modality):
         vmin, vmax = -data_max, data_max
     else:
         vmin, vmax = -0.1, 0.1
-    fig, axs = plt.subplots(1, 2, figsize=(7, 4))
+    fig, axs = plt.subplots(1, 2, figsize=(10, 7))
 
     # Plot the first flatmap
     sc1 = axs[0].scatter(lh_vertex_coords[:, 0], lh_vertex_coords[:, 1],
