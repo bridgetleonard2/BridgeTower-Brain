@@ -229,6 +229,12 @@ def get_movie_features(movie, subject, layer, n=30):
     return data
 
 
+def remove_run(arrays, index_to_remove):
+    # Return a new list with the specified run removed
+    return [array for idx, array in enumerate(arrays)
+            if idx != index_to_remove]
+
+
 def vision_model(subject, layer):
     """Function to build the vision encoding model. Creates a
     matrix mapping the linear relationship between BridgeTower features
@@ -266,9 +272,9 @@ def vision_model(subject, layer):
     train11 = get_movie_features('train_11', subject, layer)
     test = get_movie_features('test', subject, layer)
 
-    feature_arrays = np.vstack([train00, train01, train02, train03, train04,
-                                train05, train06, train07, train08, train09,
-                                train10, train11, test])
+    feature_arrays = [train00, train01, train02, train03, train04,
+                      train05, train06, train07, train08, train09,
+                      train10, train11, test]
 
     # Build encoding model
     print("Loading movie fMRI data")
@@ -276,50 +282,22 @@ def vision_model(subject, layer):
     fmri_train = np.load("data/moviedata/" + subject + "/train.npy")
     fmri_test = np.load("data/moviedata/" + subject + "/test.npy")
 
-    # Split the fmri train data to match features (12 parts)
-    fmri_train00 = fmri_train[:300]
-    fmri_train01 = fmri_train[300:600]
-    fmri_train02 = fmri_train[600:900]
-    fmri_train03 = fmri_train[900:1200]
-    fmri_train04 = fmri_train[1200:1500]
-    fmri_train05 = fmri_train[1500:1800]
-    fmri_train06 = fmri_train[1800:2100]
-    fmri_train07 = fmri_train[2100:2400]
-    fmri_train08 = fmri_train[2400:2700]
-    fmri_train09 = fmri_train[2700:3000]
-    fmri_train10 = fmri_train[3000:3300]
-    fmri_train11 = fmri_train[3300:]
-
     # Prep data
-    train00_fmri = remove_nan(fmri_train00)
-    train01_fmri = remove_nan(fmri_train01)
-    train02_fmri = remove_nan(fmri_train02)
-    train03_fmri = remove_nan(fmri_train03)
-    train04_fmri = remove_nan(fmri_train04)
-    train05_fmri = remove_nan(fmri_train05)
-    train06_fmri = remove_nan(fmri_train06)
-    train07_fmri = remove_nan(fmri_train07)
-    train08_fmri = remove_nan(fmri_train08)
-    train09_fmri = remove_nan(fmri_train09)
-    train10_fmri = remove_nan(fmri_train10)
-    train11_fmri = remove_nan(fmri_train11)
+    train_fmri = remove_nan(fmri_train)
     test_fmri = remove_nan(fmri_test)
 
-    fmri_arrays = np.vstack([train00_fmri, train01_fmri, train02_fmri,
-                            train03_fmri, train04_fmri, train05_fmri,
-                            train06_fmri, train07_fmri, train08_fmri,
-                            train09_fmri, train10_fmri, train11_fmri,
-                            test_fmri])
+    fmri_arrays = [train_fmri, test_fmri]
 
     correlations = []
 
     # For each of the 12 x,y pairs, we will train
     # a model on 11 and test using the held out one
-    for i in range(len(fmri_arrays)):
+    for i in range(len(feature_arrays)):
         print("leaving out run", i)
-        X_train = np.delete(feature_arrays, i, axis=0)
-        Y_train = np.delete(fmri_arrays, i, axis=0)
+        X_train = np.vstack(remove_run(feature_arrays, i))
+        Y_train = np.vstack(remove_run(fmri_arrays, i))
 
+        print("X_train shape", X_train.shape)
         # Define cross-validation
         run_onsets = []
         current_index = 0
@@ -328,6 +306,7 @@ def vision_model(subject, layer):
             run_onsets.append(current_index)
             current_index = next_index
 
+        print(run_onsets)
         n_samples_train = X_train.shape[0]
         cv = generate_leave_one_run_out(n_samples_train, run_onsets)
         cv = check_cv(cv)  # cross-validation splitter into a reusable list
