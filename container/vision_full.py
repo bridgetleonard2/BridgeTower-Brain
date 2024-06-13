@@ -247,7 +247,7 @@ def vision_model(subject, layer):
         Array of shape (layer_output_size*4, num_voxels) mapping
         the relationship of delayed feature vectors to each voxel
         in the fmri data.
-"""
+    """
     print("Extracting features from data")
 
     # Extract features from raw stimuli
@@ -263,129 +263,138 @@ def vision_model(subject, layer):
     train09 = get_movie_features('train_09', subject, layer)
     train10 = get_movie_features('train_10', subject, layer)
     train11 = get_movie_features('train_11', subject, layer)
+    test = get_movie_features('test', subject, layer)
+
+    feature_arrays = np.vstack([train00, train01, train02, train03, train04,
+                                train05, train06, train07, train08, train09,
+                                train10, train11, test])
 
     # Build encoding model
     print("Loading movie fMRI data")
     # Load fMRI data
     fmri_train = np.load("data/moviedata/" + subject + "/train.npy")
+    fmri_test = np.load("data/moviedata/" + subject + "/test.npy")
+
+    # Split the fmri train data to match features (12 parts)
+    fmri_train00 = fmri_train[:300]
+    fmri_train01 = fmri_train[300:600]
+    fmri_train02 = fmri_train[600:900]
+    fmri_train03 = fmri_train[900:1200]
+    fmri_train04 = fmri_train[1200:1500]
+    fmri_train05 = fmri_train[1500:1800]
+    fmri_train06 = fmri_train[1800:2100]
+    fmri_train07 = fmri_train[2100:2400]
+    fmri_train08 = fmri_train[2400:2700]
+    fmri_train09 = fmri_train[2700:3000]
+    fmri_train10 = fmri_train[3000:3300]
+    fmri_train11 = fmri_train[3300:]
 
     # Prep data
-    train_fmri = remove_nan(fmri_train)
+    train00_fmri = remove_nan(fmri_train00)
+    train01_fmri = remove_nan(fmri_train01)
+    train02_fmri = remove_nan(fmri_train02)
+    train03_fmri = remove_nan(fmri_train03)
+    train04_fmri = remove_nan(fmri_train04)
+    train05_fmri = remove_nan(fmri_train05)
+    train06_fmri = remove_nan(fmri_train06)
+    train07_fmri = remove_nan(fmri_train07)
+    train08_fmri = remove_nan(fmri_train08)
+    train09_fmri = remove_nan(fmri_train09)
+    train10_fmri = remove_nan(fmri_train10)
+    train11_fmri = remove_nan(fmri_train11)
+    test_fmri = remove_nan(fmri_test)
 
-    # fmri_arrays = train_fmri
-    feature_arrays = [train00, train01, train02, train03, train04,
-                      train05, train06, train07, train08, train09,
-                      train10, train11]
+    fmri_arrays = np.vstack([train00_fmri, train01_fmri, train02_fmri,
+                            train03_fmri, train04_fmri, train05_fmri,
+                            train06_fmri, train07_fmri, train08_fmri,
+                            train09_fmri, train10_fmri, train11_fmri,
+                            test_fmri])
 
-    # Combine data
-    Y_train = train_fmri
-    X_train = np.vstack(feature_arrays)
+    correlations = []
 
-    # Define cross-validation
-    run_onsets = []
-    current_index = 0
-    for arr in feature_arrays:
-        next_index = current_index + arr.shape[0]
-        run_onsets.append(current_index)
-        current_index = next_index
+    # For each of the 12 x,y pairs, we will train
+    # a model on 11 and test using the held out one
+    for i in range(len(fmri_arrays)):
+        print("leaving out run", i)
+        X_train = np.delete(feature_arrays, i, axis=0)
+        Y_train = np.delete(fmri_arrays, i, axis=0)
 
-    n_samples_train = X_train.shape[0]
-    cv = generate_leave_one_run_out(n_samples_train, run_onsets)
-    cv = check_cv(cv)  # cross-validation splitter into a reusable list
+        # Define cross-validation
+        run_onsets = []
+        current_index = 0
+        for arr in feature_arrays:
+            next_index = current_index + arr.shape[0]
+            run_onsets.append(current_index)
+            current_index = next_index
 
-    # Define the model
-    scaler = StandardScaler(with_mean=True, with_std=False)
+        n_samples_train = X_train.shape[0]
+        cv = generate_leave_one_run_out(n_samples_train, run_onsets)
+        cv = check_cv(cv)  # cross-validation splitter into a reusable list
 
-    delayer = Delayer(delays=[1, 2, 3, 4])
+        # Define the model
+        scaler = StandardScaler(with_mean=True, with_std=False)
+        delayer = Delayer(delays=[1, 2, 3, 4])
+        backend = set_backend("torch_cuda", on_error="warn")
+        print(backend)
+        X_train = X_train.astype("float32")
+        alphas = np.logspace(1, 20, 20)
 
-    backend = set_backend("torch_cuda", on_error="warn")
-    print(backend)
+        print("Running linear model")
+        ridge_cv = RidgeCV(
+            alphas=alphas, cv=cv,
+            solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
+                               n_targets_batch_refit=100))
 
-    X_train = X_train.astype("float32")
+        pipeline = make_pipeline(
+            scaler,
+            delayer,
+            ridge_cv,
+        )
 
-    alphas = np.logspace(1, 20, 20)
+        set_config(display='diagram')  # requires scikit-learn 0.23
+        pipeline
 
-    print("Running linear model")
-    ridge_cv = RidgeCV(
-        alphas=alphas, cv=cv,
-        solver_params=dict(n_targets_batch=500, n_alphas_batch=5,
-                           n_targets_batch_refit=100))
+        _ = pipeline.fit(X_train, Y_train)
 
-    pipeline = make_pipeline(
-        scaler,
-        delayer,
-        ridge_cv,
-    )
+        coef = pipeline[-1].coef_
+        coef = backend.to_numpy(coef)
+        print("(n_delays * n_features, n_voxels) =", coef.shape)
 
-    set_config(display='diagram')  # requires scikit-learn 0.23
-    pipeline
+        # Regularize coefficients
+        coef /= np.linalg.norm(coef, axis=0)[None]
 
-    _ = pipeline.fit(X_train, Y_train)
+        # split the ridge coefficients per delays
+        delayer = pipeline.named_steps['delayer']
+        coef_per_delay = delayer.reshape_by_delays(coef, axis=0)
+        print("(n_delays, n_features, n_voxels) =", coef_per_delay.shape)
+        del coef
 
-    coef = pipeline[-1].coef_
-    coef = backend.to_numpy(coef)
-    print("(n_delays * n_features, n_voxels) =", coef.shape)
+        # average over delays
+        average_coef = np.mean(coef_per_delay, axis=0)
+        print("(n_features, n_voxels) =", average_coef.shape)
+        del coef_per_delay
 
-    # Regularize coefficients
-    coef /= np.linalg.norm(coef, axis=0)[None]
+        # Test the model
+        X_test = feature_arrays[i]
+        Y_test = fmri_arrays[i]
 
-    # split the ridge coefficients per delays
-    delayer = pipeline.named_steps['delayer']
-    coef_per_delay = delayer.reshape_by_delays(coef, axis=0)
-    print("(n_delays, n_features, n_voxels) =", coef_per_delay.shape)
-    del coef
+        # Predict
+        Y_pred = np.dot(X_test, average_coef)
 
-    # average over delays
-    average_coef = np.mean(coef_per_delay, axis=0)
-    print("(n_features, n_voxels) =", average_coef.shape)
-    del coef_per_delay
+        test_correlations = calc_correlation(Y_pred, Y_test)
+
+        print("Max correlation:", np.nanmax(test_correlations))
+
+        correlations.append(test_correlations)
 
     print("Finished vision encoding model")
 
-    print(average_coef.shape)
-    return average_coef
+    print(correlations.shape)
 
+    # Take average correlations over all runs
+    average_correlations = np.mean(correlations, axis=0)
 
-def vision_prediction(subject, layer, vision_encoding_matrix):
-    """Function to run the vision encoding model. Predicts brain activity
-    to story listening and return correlations between predictions and real
-    brain activity.
-
-    Parameters
-    ----------
-    subject: string
-        A reference to the subject for analysis. Used to load fmri data.
-    layer: int
-        A layer reference for the BridgeTower model. Set's the forward
-        hook on the relevant layer.
-    vision_encoding_matrix: array
-        Generated by vision_model() function. A matrix mapping the relationship
-        between feature vectors and brain activity
-
-    Returns
-    -------
-    correlations: Array
-        Array of shape (num_voxels) representing the correlation between
-        predictions and real brain activity for each voxel.
-    """
-    # Get test features
-    test = get_movie_features('test', subject, layer)
-
-    # Load fmri data
-    fmri_test = np.load("data/moviedata/" + subject + "/test.npy")
-
-    # Prep data
-    test_fmri = remove_nan(fmri_test)
-
-    # Make fmri predictions
-    test_predictions = np.dot(test, vision_encoding_matrix)
-
-    # Calculate correlations
-    test_correlations = calc_correlation(test_predictions, test_fmri)
-
-    print("Max correlation:", np.nanmax(test_correlations))
-
-    return test_correlations
+    return average_correlations
 
 
 if __name__ == "__main__":
@@ -395,14 +404,9 @@ if __name__ == "__main__":
 
         print("Building vision model")
         # Build encoding model
-        vision_encoding_matrix = vision_model(subject, layer)
+        correlations = vision_model(subject, layer)
 
-        print("Predicting fMRI data and calculating correlations")
-        # Predict story fmri with vision model
-        correlations = vision_prediction(subject, layer,
-                                         vision_encoding_matrix)
-
-        np.save('results/vision_model/' + subject +
+        np.save('results/vision_mode/' + subject +
                 '/layer' + str(layer) + '_correlations.npy', correlations)
     else:
         print("This script requires exactly two arguments: subject, modality, \
