@@ -67,7 +67,12 @@ def create_flatmap(subject, layer, correlation_path, modality):
     rh_vertex_coords = np.load("data/fmri_data/mappers/" + subject +
                                "_vertex_coords_rh.npy")
 
-    vmin, vmax = -0.1, 0.1
+    if modality == 'visionONLY':
+        data_max = np.max(abs(np.concatenate((lh_vertex_correlation_data,
+                                              rh_vertex_correlation_data))))
+        vmin, vmax = -data_max, data_max
+    else:
+        vmin, vmax = -0.1, 0.1
     fig, axs = plt.subplots(1, 2, figsize=(7, 4))
 
     # Plot the first flatmap
@@ -99,7 +104,7 @@ def create_flatmap(subject, layer, correlation_path, modality):
 
     # Set the color bar to only display min and max values
     cbar.set_ticks([vmin, vmax])
-    cbar.set_ticklabels([f'{vmin}', f'{vmax}'])
+    cbar.set_ticklabels([f'{vmin:.2f}', f'{vmax:.2f}'])
 
     # Remove the color bar box
     cbar.outline.set_visible(False)
@@ -113,6 +118,11 @@ def create_flatmap(subject, layer, correlation_path, modality):
         latex = r"$r_{\mathit{story \rightarrow movie}}"
         plt.title(f'{subject}\n{latex}$')
         plt.savefig('results/story_to_movie/' + subject + '/layer' + layer +
+                    '_visual.png', format='png')
+    elif modality == 'visionONLY':
+        plt.title(f'{subject}\nVision Only')
+
+        plt.savefig('results/vision_only/' + subject + '/layer' + layer +
                     '_visual.png', format='png')
     plt.show()
 
