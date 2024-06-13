@@ -136,8 +136,9 @@ def get_movie_features(movie, subject, layer, n=30):
         over the course of n_images / 30.
     """
     try:
-        movie_data = np.load(f"results/features/movie/{subject}/layer{layer}" +
-                             f"_{movie}.npy")
+        data = np.load(f"results/features/movie/{subject}/layer{layer}" +
+                       f"_{movie}.npy")
+        print("Loaded movie features")
     except FileNotFoundError:
         data_path = 'data/raw_stimuli/shortclips/stimuli/'
 
@@ -406,7 +407,7 @@ if __name__ == "__main__":
         # Build encoding model
         correlations = vision_model(subject, layer)
 
-        np.save('results/vision_mode/' + subject +
+        np.save('results/vision_model/' + subject +
                 '/layer' + str(layer) + '_correlations.npy', correlations)
     else:
         print("This script requires exactly two arguments: subject, modality, \

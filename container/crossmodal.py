@@ -203,8 +203,9 @@ def get_movie_features(movie, subject, layer, n=30):
         over the course of n_images / 30.
     """
     try:
-        movie_data = np.load(f"results/features/movie/{subject}/layer{layer}" +
-                             f"_{movie}.npy")
+        data = np.load(f"results/features/movie/{subject}/layer{layer}" +
+                       f"_{movie}.npy")
+        print("Loaded movie features")
     except FileNotFoundError:
         data_path = 'data/raw_stimuli/shortclips/stimuli/'
 
@@ -215,7 +216,7 @@ def get_movie_features(movie, subject, layer, n=30):
         device, model, processor, features, layer_selected = setup_model(layer)
 
         # create overall data structure for average feature vectors
-        # a dictionary with layer names as keys and a 
+        # a dictionary with layer names as keys and a
         # list of vectors as it values
         data = {}
 
@@ -314,10 +315,11 @@ def get_story_features(story, subject, layer, n=20):
         over the course of each word in the story.
     """
     try:
-        story_data = np.load(f"results/features/story/{subject}/" +
-                             f"layer{layer}_{story}.npy")
+        data = np.load(f"results/features/story/{subject}/" +
+                       f"layer{layer}_{story}.npy")
+        print("Loaded story features")
     except FileNotFoundError:
-        data_path = 'data/raw_stimuli/textgrids/stimuli/'    
+        data_path = 'data/raw_stimuli/textgrids/stimuli/'
         print("loading textgrid")
 
         story_data = textgrid_to_array(f"{data_path}{story}.TextGrid")
@@ -331,7 +333,7 @@ def get_story_features(story, subject, layer, n=20):
         image_array = np.full((512, 512, 3), gray_value, dtype=np.uint8)
 
         # create overall data structure for average feature vectors
-        # a dictionary with layer names as keys and a list of vectors 
+        # a dictionary with layer names as keys and a list of vectors
         # as it values
         data = {}
 
