@@ -279,6 +279,9 @@ def get_story_features(story, subject, layer, n=20):
         data = np.array(data[f'layer_{layer}'])
         print("Got story features")
 
+        np.save(f"results/features/story/{subject}/layer{layer}_{story}.npy",
+                data)
+
         return data
 
 
