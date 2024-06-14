@@ -36,8 +36,8 @@ class EncodingModel:
         self.encoding_model = fun.crossmodal_vision_model(self.subject,
                                                           self.layer)
         self.correlations = fun.faceLandscape_prediction(self.subject,
-                                                         self.layer,
                                                          modality,
+                                                         self.layer,
                                                          self.encoding_model)
 
 
