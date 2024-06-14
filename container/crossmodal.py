@@ -21,8 +21,8 @@ from sklearn import set_config
 from transformers import BridgeTowerModel, BridgeTowerProcessor
 
 # Specialized functions
-from functions import remove_nan, prep_data, generate_leave_one_run_out, \
-    calc_correlation, Delayer
+from container.utils import remove_nan, prep_data, \
+    generate_leave_one_run_out, calc_correlation, Delayer
 
 from tqdm import tqdm
 

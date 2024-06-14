@@ -1,8 +1,106 @@
+# Data loading
 import numpy as np
+import h5py
+import re
+
+# Regression setup
 from scipy.signal import resample
 from sklearn.utils.validation import check_random_state
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted, check_array
+
+
+def load_hdf5_array(file_name, key=None, slice=slice(0, None)):
+    """Function to load data from an hdf file.
+
+    Parameters
+    ----------
+    file_name: string
+        hdf5 file name.
+    key: string
+        Key name to load. If not provided, all keys will be loaded.
+    slice: slice, or tuple of slices
+        Load only a slice of the hdf5 array. It will load `array[slice]`.
+        Use a tuple of slices to get a slice in multiple dimensions.
+
+    Returns
+    -------
+    result : array or dictionary
+        Array, or dictionary of arrays (if `key` is None).
+    """
+    with h5py.File(file_name, mode='r') as hf:
+        if key is None:
+            data = dict()
+            for k in hf.keys():
+                data[k] = hf[k][slice]
+            return data
+        else:
+            return hf[key][slice]
+
+
+def textgrid_to_array(textgrid):
+    """Function to load transcript from textgrid into a list.
+
+    Parameters
+    ----------
+    textgrid: string
+        TextGrid file name.
+
+    Returns
+    -------
+    full_transcript : Array
+        Array with each word in the story.
+    """
+    if textgrid == 'data/raw_stimuli/textgrids/stimuli/legacy.TextGrid':
+        with open(textgrid, 'r')as file:
+            data = file.readlines()
+
+        full_transcript = []
+        # Important info starts at line 5
+        for line in data[5:]:
+            if line.startswith('2'):
+                index = data.index(line)
+                word = re.search(r'"([^"]*)"', data[index+1].strip()).group(1)
+                full_transcript.append(word)
+    elif textgrid == 'data/raw_stimuli/textgrids/stimuli/life.TextGrid':
+        with open(textgrid, 'r') as file:
+            data = file.readlines()
+
+        full_transcript = []
+        for line in data:
+            if "word" in line:
+                index = data.index(line)
+                words = data[index+6:]  # this is where first word starts
+
+        for i, word in enumerate(words):
+            if i % 3 == 0:
+                word = re.search(r'"([^"]*)"', word.strip()).group(1)
+                full_transcript.append(word)
+    else:
+        with open(textgrid, 'r') as file:
+            data = file.readlines()
+
+        # Important info starts at line 8
+        for line in data[8:]:
+            # We only want item [2] info because those are the words instead
+            # of phonemes
+            if "item [2]" in line:
+                index = data.index(line)
+
+        summary_info = [line.strip() for line in data[index+1:index+6]]
+        print(summary_info)
+
+        word_script = data[index+6:]
+        full_transcript = []
+        for line in word_script:
+            if "intervals" in line:
+                # keep track of which interval we're on
+                ind = word_script.index(line)
+                word = re.search(r'"([^"]*)"',
+                                 word_script[ind+3].strip()).group(1)
+                full_transcript.append(word)
+
+    return np.array(full_transcript)
 
 
 # Loading data
@@ -117,6 +215,12 @@ def calc_correlation(predicted_fMRI, real_fMRI):
     print(f"NaNs in correlation coefficients: {nans_in_correlations}")
 
     return correlation_coefficients
+
+
+def remove_run(arrays, index_to_remove):
+    # Return a new list with the specified run removed
+    return [array for idx, array in enumerate(arrays)
+            if idx != index_to_remove]
 
 
 class Delayer(BaseEstimator, TransformerMixin):

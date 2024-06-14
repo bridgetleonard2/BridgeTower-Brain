@@ -22,7 +22,7 @@ from sklearn import set_config
 from transformers import BridgeTowerModel, BridgeTowerProcessor
 
 # Specialized functions
-from functions import remove_nan, generate_leave_one_run_out, Delayer
+from container.utils import remove_nan, generate_leave_one_run_out, Delayer
 
 from tqdm import tqdm
 
@@ -358,7 +358,7 @@ def vision_model(subject, layer):
     return average_coef
 
 
-def fmri_prediction(subject, modality, layer, vision_encoding_matrix):
+def faceLandscape_prediction(subject, modality, layer, vision_encoding_matrix):
     """Function to run the vision encoding model. Predicts brain activity
     to story listening and return correlations between predictions and real
     brain activity.

@@ -1,55 +1,50 @@
-import fun
+import container.fun as fun
 import numpy as np
-import sys
 
 
-class CrossModal:
-    def __init__(self, subject, modality, layer):
+class EncodingModel:
+    def __init__(self, subject, layer):
         self.subject = subject
-        self.modality = modality
         self.layer = layer
         self.encoding_model = None
         self.correlations = None
 
-    def build_encoding_model(self):
-        if self.modality == "vision":
-            print("Building vision model")
-            # Build encoding model
-            self.encoding_model = fun.vision_model(self.subject, self.layer)
-        elif self.modality == "language":
-            print("Building language model")
-            # Build encoding model
-            self.encoding_model = fun.language_model(self.subject, self.layer)
+    def crossmodal_vision_model(self):
+        print("Building vision model")
+        self.encoding_model = fun.crossmodal_vision_model(self.subject,
+                                                          self.layer)
+        print("Predicting fMRI data and calculating correlations")
+        self.correlations = fun.story_prediction(self.subject, self.layer,
+                                                 self.encoding_model)
+        np.save(f'results/movie_to_story/{self.subject}/' +
+                f'layer{str(self.layer)}_correlations.npy',
+                self.correlations)
 
-    def predict_fmri_data(self):
-        if self.modality == "vision":
-            print("Predicting fMRI data and calculating correlations")
-            # Predict story fmri with vision model
-            self.correlations = fun.story_prediction(self.subject, self.layer,
-                                                     self.encoding_model)
-            np.save(f'results/movie_to_story/{self.subject}/' +
-                    f'layer{str(self.layer)}_correlations.npy',
-                    self.correlations)
-        elif self.modality == "language":
-            print("Predicting fMRI data and calculating correlations")
-            # Predict story fmri with language model
-            self.correlations = fun.movie_predictions(self.subject, self.layer,
-                                                      self.encoding_model)
-            np.save(f'results/story_to_movie/{self.subject}/' +
-                    f'layer{str(self.layer)}_correlations.npy',
-                    self.correlations)
+    def crossmodal_language_model(self):
+        print("Building language model")
+        self.encoding_model = fun.crossmodal_language_model(self.subject,
+                                                            self.layer)
+        print("Predicting fMRI data and calculating correlations")
+        self.correlations = fun.movie_prediction(self.subject, self.layer,
+                                                 self.encoding_model)
+
+    def withinmodal_vision_model(self):
+        self.correlations = fun.withinmodal_vision_model(self.subject,
+                                                         self.layer)
+
+    def faceLand_vision_model(self, modality):
+        self.encoding_model = fun.crossmodal_vision_model(self.subject,
+                                                          self.layer)
+        self.correlations = fun.faceLandscape_prediction(self.subject,
+                                                         self.layer,
+                                                         modality,
+                                                         self.encoding_model)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 4:
-        subject = sys.argv[1]
-        modality = sys.argv[2]
-        layer = int(sys.argv[3])
-
-        crossmodal = CrossModal(subject, modality, layer)
-        crossmodal.build_encoding_model()
-        crossmodal.predict_fmri_data()
-
-    else:
-        print("This script requires exactly two arguments: subject, modality, \
-               and layer. Ex. python crossmodal.py S1 vision 1")
+    crossmodalVision = EncodingModel("S1", 8).crossmodal_vision_model()
+    crossmodalLanguage = EncodingModel("S1", 8).crossmodal_language_model()
+    withinmodalVision = EncodingModel("S1", 8).withinmodal_vision_model()
+    faceVision = EncodingModel("S1", 8).faceLand_vision_model("face")
+    landscapeVision = EncodingModel("S1", 8).faceLand_vision_model("landscape")
+    print("Encoding models completed")

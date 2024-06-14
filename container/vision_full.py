@@ -19,7 +19,7 @@ from sklearn import set_config
 from transformers import BridgeTowerModel, BridgeTowerProcessor
 
 # Specialized functions
-from functions import remove_nan, generate_leave_one_run_out, \
+from container.utils import remove_nan, generate_leave_one_run_out, \
     calc_correlation, Delayer
 
 from tqdm import tqdm
@@ -149,7 +149,7 @@ def get_movie_features(movie, subject, layer, n=30):
         device, model, processor, features, layer_selected = setup_model(layer)
 
         # create overall data structure for average feature vectors
-        # a dictionary with layer names as keys and a 
+        # a dictionary with layer names as keys and a
         # list of vectors as it values
         data = {}
 
@@ -235,7 +235,7 @@ def remove_run(arrays, index_to_remove):
             if idx != index_to_remove]
 
 
-def vision_model(subject, layer):
+def withinmodal_vision_model(subject, layer):
     """Function to build the vision encoding model. Creates a
     matrix mapping the linear relationship between BridgeTower features
     and brain voxel activity.
@@ -416,7 +416,7 @@ if __name__ == "__main__":
 
         print("Building vision model")
         # Build encoding model
-        correlations = vision_model(subject, layer)
+        correlations = withinmodal_vision_model(subject, layer)
 
         np.save('results/vision_model/' + subject +
                 '/layer' + str(layer) + '_correlations.npy', correlations)
