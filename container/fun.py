@@ -1,7 +1,9 @@
 # Basics
 import numpy as np
+import os
 
 # Data loading
+from PIL import Image
 import torch
 from torch.nn.functional import pad
 from datasets import load_dataset
@@ -18,7 +20,7 @@ from sklearn import set_config
 from transformers import BridgeTowerModel, BridgeTowerProcessor
 
 # Specialized functions
-import container.utils as utils
+import utils
 
 # Progress bar
 from tqdm import tqdm
@@ -543,16 +545,16 @@ def crossmodal_language_model(subject, layer):
     # Extract features from raw stimuli
     alternateithicatom = get_story_features('alternateithicatom', subject,
                                             layer)
-    avatar = get_story_features('avatar.TextGrid', subject, layer)
-    howtodraw = get_story_features('howtodraw.TextGrid', subject, layer)
-    legacy = get_story_features('legacy.TextGrid', subject, layer)
-    life = get_story_features('life.TextGrid', subject, layer)
-    yankees = get_story_features('myfirstdaywiththeyankees.TextGrid', subject,
+    avatar = get_story_features('avatar', subject, layer)
+    howtodraw = get_story_features('howtodraw', subject, layer)
+    legacy = get_story_features('legacy', subject, layer)
+    life = get_story_features('life', subject, layer)
+    yankees = get_story_features('myfirstdaywiththeyankees', subject,
                                  layer)
-    naked = get_story_features('naked.TextGrid', subject, layer)
-    ode = get_story_features('odetostepfather.TextGrid', subject, layer)
-    souls = get_story_features('souls.TextGrid', subject, layer)
-    undertheinfluence = get_story_features('undertheinfluence.TextGrid',
+    naked = get_story_features('naked', subject, layer)
+    ode = get_story_features('odetostepfather', subject, layer)
+    souls = get_story_features('souls', subject, layer)
+    undertheinfluence = get_story_features('undertheinfluence',
                                            subject, layer)
 
     # Build encoding model
@@ -689,16 +691,16 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     # Get story features
     alternateithicatom = get_story_features('alternateithicatom', subject,
                                             layer)
-    avatar = get_story_features('avatar.TextGrid', subject, layer)
-    howtodraw = get_story_features('howtodraw.TextGrid', subject, layer)
-    legacy = get_story_features('legacy.TextGrid', subject, layer)
-    life = get_story_features('life.TextGrid', subject, layer)
-    yankees = get_story_features('myfirstdaywiththeyankees.TextGrid', subject,
+    avatar = get_story_features('avatar', subject, layer)
+    howtodraw = get_story_features('howtodraw', subject, layer)
+    legacy = get_story_features('legacy', subject, layer)
+    life = get_story_features('life', subject, layer)
+    yankees = get_story_features('myfirstdaywiththeyankees', subject,
                                  layer)
-    naked = get_story_features('naked.TextGrid', subject, layer)
-    ode = get_story_features('odetostepfather.TextGrid', subject, layer)
-    souls = get_story_features('souls.TextGrid', subject, layer)
-    undertheinfluence = get_story_features('undertheinfluence.TextGrid',
+    naked = get_story_features('naked', subject, layer)
+    ode = get_story_features('odetostepfather', subject, layer)
+    souls = get_story_features('souls', subject, layer)
+    undertheinfluence = get_story_features('undertheinfluence',
                                            subject, layer)
 
     # Project features into opposite space

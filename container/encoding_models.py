@@ -1,4 +1,4 @@
-import container.fun as fun
+import fun
 import numpy as np
 
 
