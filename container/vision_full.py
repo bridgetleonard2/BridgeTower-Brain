@@ -282,11 +282,40 @@ def vision_model(subject, layer):
     fmri_train = np.load("data/moviedata/" + subject + "/train.npy")
     fmri_test = np.load("data/moviedata/" + subject + "/test.npy")
 
+    # Split the fmri train data to match features (12 parts)
+    fmri_train00 = fmri_train[:300]
+    fmri_train01 = fmri_train[300:600]
+    fmri_train02 = fmri_train[600:900]
+    fmri_train03 = fmri_train[900:1200]
+    fmri_train04 = fmri_train[1200:1500]
+    fmri_train05 = fmri_train[1500:1800]
+    fmri_train06 = fmri_train[1800:2100]
+    fmri_train07 = fmri_train[2100:2400]
+    fmri_train08 = fmri_train[2400:2700]
+    fmri_train09 = fmri_train[2700:3000]
+    fmri_train10 = fmri_train[3000:3300]
+    fmri_train11 = fmri_train[3300:]
+
     # Prep data
-    train_fmri = remove_nan(fmri_train)
+    train00_fmri = remove_nan(fmri_train00)
+    train01_fmri = remove_nan(fmri_train01)
+    train02_fmri = remove_nan(fmri_train02)
+    train03_fmri = remove_nan(fmri_train03)
+    train04_fmri = remove_nan(fmri_train04)
+    train05_fmri = remove_nan(fmri_train05)
+    train06_fmri = remove_nan(fmri_train06)
+    train07_fmri = remove_nan(fmri_train07)
+    train08_fmri = remove_nan(fmri_train08)
+    train09_fmri = remove_nan(fmri_train09)
+    train10_fmri = remove_nan(fmri_train10)
+    train11_fmri = remove_nan(fmri_train11)
     test_fmri = remove_nan(fmri_test)
 
-    fmri_arrays = [train_fmri, test_fmri]
+    fmri_arrays = [train00_fmri, train01_fmri, train02_fmri,
+                   train03_fmri, train04_fmri, train05_fmri,
+                   train06_fmri, train07_fmri, train08_fmri,
+                   train09_fmri, train10_fmri, train11_fmri,
+                   test_fmri]
 
     correlations = []
 
@@ -294,14 +323,15 @@ def vision_model(subject, layer):
     # a model on 11 and test using the held out one
     for i in range(len(feature_arrays)):
         print("leaving out run", i)
-        X_train = np.vstack(remove_run(feature_arrays, i))
+        new_feat_arrays = remove_run(feature_arrays, i)
+        X_train = np.vstack(new_feat_arrays)
         Y_train = np.vstack(remove_run(fmri_arrays, i))
 
         print("X_train shape", X_train.shape)
         # Define cross-validation
         run_onsets = []
         current_index = 0
-        for arr in X_train:
+        for arr in new_feat_arrays:
             next_index = current_index + arr.shape[0]
             run_onsets.append(current_index)
             current_index = next_index
@@ -369,10 +399,12 @@ def vision_model(subject, layer):
 
     print("Finished vision encoding model")
 
+    # Make correlations np array
+    correlations = np.array(correlations)
     print(correlations.shape)
 
     # Take average correlations over all runs
-    average_correlations = np.mean(correlations, axis=0)
+    average_correlations = np.nanmean(correlations, axis=0)
 
     return average_correlations
 
@@ -389,5 +421,5 @@ if __name__ == "__main__":
         np.save('results/vision_model/' + subject +
                 '/layer' + str(layer) + '_correlations.npy', correlations)
     else:
-        print("This script requires exactly two arguments: subject, modality, \
-               and layer. Ex. python crossmodal.py S1 vision 1")
+        print("This script requires exactly two arguments: subject \
+               and layer. Ex. python vision_full.py S1 8")

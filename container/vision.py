@@ -406,5 +406,5 @@ if __name__ == "__main__":
         np.save('results/vision_model/' + subject +
                 '/layer' + str(layer) + '_correlations.npy', correlations)
     else:
-        print("This script requires exactly two arguments: subject, modality, \
-               and layer. Ex. python crossmodal.py S1 vision 1")
+        print("This script requires exactly two arguments: subject \
+               and layer. Ex. python vision.py S1 8")
