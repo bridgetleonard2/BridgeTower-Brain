@@ -282,7 +282,7 @@ def get_story_features(story, subject, layer, n=20):
         np.save(f"results/features/story/{subject}/layer{layer}_{story}.npy",
                 data)
 
-        return data
+    return data
 
 
 def alignment(layer):
@@ -564,20 +564,21 @@ def crossmodal_language_model(subject, layer):
     print('Load story fMRI data')
     # Load fmri data
     # Using all data for cross-modality encoding model
-    fmri_alternateithicatom = np.load("data/storydata/" + subject +
-                                      "/alternateithicatom.npy")
-    fmri_avatar = np.load("data/storydata/" + subject + "/avatar.npy")
-    fmri_howtodraw = np.load("data/storydata/" + subject + "/howtodraw.npy")
-    fmri_legacy = np.load("data/storydata/" + subject + "/legacy.npy")
-    fmri_life = np.load("data/storydata/" + subject + "/life.npy")
-    fmri_yankees = np.load("data/storydata/" + subject +
-                           "/myfirstdaywiththeyankees.npy")
-    fmri_naked = np.load("data/storydata/" + subject + "/naked.npy")
-    fmri_ode = np.load("data/storydata/" + subject + "/odetostepfather.npy")
-    fmri_souls = np.load("data/storydata/" + subject + "/souls.npy")
-    fmri_undertheinfluence = np.load("data/storydata/" + subject +
-                                     "/undertheinfluence.npy")
+    fmri_alternateithicatom = np.load(f"data/storydata/{subject}/" +
+                                      "alternateithicatom.npy")
+    fmri_avatar = np.load(f"data/storydata/{subject}/avatar.npy")
+    fmri_howtodraw = np.load(f"data/storydata/{subject}/howtodraw.npy")
+    fmri_legacy = np.load(f"data/storydata/{subject}/legacy.npy")
+    fmri_life = np.load(f"data/storydata/{subject}/life.npy")
+    fmri_yankees = np.load(f"data/storydata/{subject}/" +
+                           "myfirstdaywiththeyankees.npy")
+    fmri_naked = np.load(f"data/storydata/{subject}/naked.npy")
+    fmri_ode = np.load(f"data/storydata/{subject}/odetostepfather.npy")
+    fmri_souls = np.load(f"data/storydata/{subject}/souls.npy")
+    fmri_undertheinfluence = np.load(f"data/storydata/{subject}/" +
+                                     "undertheinfluence.npy")
 
+    print(alternateithicatom.shape)
     # Prep data
     fmri_ai, ai_features = utils.prep_data(fmri_alternateithicatom,
                                            alternateithicatom)
