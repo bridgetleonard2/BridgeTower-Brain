@@ -798,7 +798,7 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     return story_correlations
 
 
-def movie_predictions(subject, layer, language_encoding_model):
+def movie_prediction(subject, layer, language_encoding_model):
     """Function to run the language encoding model. Predicts brain activity
     to movie watching and return correlations between predictions and real
     brain activity.

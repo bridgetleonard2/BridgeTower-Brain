@@ -451,8 +451,8 @@ if __name__ == "__main__":
 
         print("Predicting fMRI data and calculating correlations")
         # Predict story fmri with vision model
-        prediction = fmri_prediction(subject, modality, layer,
-                                     vision_encoding_matrix)
+        prediction = faceLandscape_prediction(subject, modality, layer,
+                                              vision_encoding_matrix)
 
         if modality == 'face':
             np.save('results/faces/' + subject +
