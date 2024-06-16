@@ -517,8 +517,6 @@ def crossmodal_vision_model(subject, layer):
     del coef_per_delay
 
     print("Finished vision encoding model")
-    np.save(f'results/movie_to_story/{subject}/' +
-            f'layer{str(layer)}_correlations.npy', average_coef)
 
     return average_coef
 
@@ -662,8 +660,6 @@ def crossmodal_language_model(subject, layer):
     del coef_per_delay
 
     print("Finished language encoding model")
-    np.save(f'results/story_to_movie/{subject}/' +
-            f'layer{str(layer)}_correlations.npy', average_coef)
 
     return average_coef
 
@@ -795,6 +791,9 @@ def story_prediction(subject, layer, vision_encoding_matrix):
     story_correlations = np.nanmean(all_correlations, axis=0)
     print("Max correlation:", np.nanmax(story_correlations))
 
+    np.save(f'results/movie_to_story/{subject}/' +
+            f'layer{str(layer)}_correlations.npy', story_correlations)
+
     return story_correlations
 
 
@@ -889,6 +888,9 @@ def movie_prediction(subject, layer, language_encoding_model):
 
     correlations = np.nanmean(all_correlations, axis=0)
     print('max correlation', np.nanmax(correlations))
+
+    np.save(f'results/story_to_movie/{subject}/' +
+            f'layer{str(layer)}_correlations.npy', correlations)
 
     return correlations
 
@@ -1139,7 +1141,7 @@ def faceLandscape_prediction(subject, modality, layer, vision_encoding_matrix):
     if data.ndim > 2:
         data = np.mean(data, axis=1)
 
-    print("Got face features")
+    print(f"Got {modality} features")
 
     print('encoding matrix shape:', vision_encoding_matrix.shape)
     print('data shape:', data.shape)

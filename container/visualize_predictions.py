@@ -331,5 +331,5 @@ if __name__ == "__main__":
     else:
         print("Please provide the subject, layer, modality, and prediction \
               path. Usage: python visualize_predictions.py <subject> \
-              <layer> <modality> <prediction_path>")
+              <layer> <modality>")
         sys.exit(1)
