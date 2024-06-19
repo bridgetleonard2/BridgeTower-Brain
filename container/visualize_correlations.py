@@ -7,7 +7,7 @@ from nilearn.datasets import load_mni152_template
 import sys
 
 
-def create_flatmap(subject, layer, correlation_path, modality):
+def create_flatmap(subject, layer, modality):
     """Function to run the vision encoding model. Predicts brain activity
     to story listening and return correlations between predictions and real
     brain activity.
@@ -32,6 +32,16 @@ def create_flatmap(subject, layer, correlation_path, modality):
     Flatmaps:
         Saves flatmap visualizations as pngs
     """
+    if modality == 'vision':
+        correlation_path = 'results/movie_to_story/' + subject + '/layer' + \
+                            layer + '_correlations.npy'
+    elif modality == 'language':
+        correlation_path = 'results/story_to_movie/' + subject + '/layer' + \
+                            layer + '_correlations.npy'
+    elif modality == 'visionONLY':
+        correlation_path = 'results/vision_only/' + subject + '/layer' + \
+                            layer + '_correlations.npy'
+
     # Load correlations
     correlations = np.load(correlation_path)
 
@@ -134,9 +144,18 @@ def transform_to_mni(coords, affine):
     return mni_coords
 
 
-def create_3d_mni_plot(subject, layer, correlation_path, modality):
+def create_3d_mni_plot(subject, layer, modality):
     """Function to create a 3D volume plot of reconstructed correlations
     in MNI space."""
+    if modality == 'vision':
+        correlation_path = 'results/movie_to_story/' + subject + '/layer' + \
+                            layer + '_correlations.npy'
+    elif modality == 'language':
+        correlation_path = 'results/story_to_movie/' + subject + '/layer' + \
+                            layer + '_correlations.npy'
+    elif modality == 'visionONLY':
+        correlation_path = 'results/vision_only/' + subject + '/layer' + \
+                            layer + '_correlations.npy'
 
     # Load correlations
     correlations = np.load(correlation_path)
@@ -217,15 +236,14 @@ def create_3d_mni_plot(subject, layer, correlation_path, modality):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 5:
+    if len(sys.argv) == 4:
         subject = sys.argv[1]
-        modality = sys.argv[2]
-        layer = sys.argv[3]
-        correlation_path = sys.argv[4]
-        create_flatmap(subject, layer, correlation_path, modality)
-        create_3d_mni_plot(subject, layer, correlation_path, modality)
+        layer = sys.argv[2]
+        modality = sys.argv[3]
+        create_flatmap(subject, layer, modality)
+        create_3d_mni_plot(subject, layer, modality)
     else:
-        print("Please provide the subject, modality, layer, and correlation \
-              path. Usage: python visualize_correlations.py <subject> \
-              <modality> <layer> <correlation_path>")
+        print("Please provide the subject, modality, and layer.\
+              Usage: python visualize_correlations.py <subject> \
+              <modality> <layer>")
         sys.exit(1)
