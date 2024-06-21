@@ -196,6 +196,11 @@ def get_movie_features(movie, subject, layer, n=30):
         data = np.array(data[f"layer_{layer}"])
         print("Got movie features")
 
+        # Data should be 2d of shape (n_images/n, num_features)
+        # if data is above 2d, average 2nd+ dimensions
+        if data.ndim > 2:
+            data = np.mean(data, axis=1)
+
         np.save(f"results/features/movie/{subject}/layer{layer}_{movie}.npy",
                 data)
 
@@ -278,6 +283,11 @@ def get_story_features(story, subject, layer, n=20):
         # Save data
         data = np.array(data[f'layer_{layer}'])
         print("Got story features")
+
+        # Data should be 2d of shape (n_images/n, num_features)
+        # if data is above 2d, average 2nd+ dimensions
+        if data.ndim > 2:
+            data = np.mean(data, axis=1)
 
         np.save(f"results/features/story/{subject}/layer{layer}_{story}.npy",
                 data)
