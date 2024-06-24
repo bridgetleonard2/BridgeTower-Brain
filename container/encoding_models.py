@@ -42,9 +42,9 @@ class EncodingModel:
 
 
 if __name__ == "__main__":
-    crossmodalVision = EncodingModel("S1", 8).crossmodal_vision_model()
-    crossmodalLanguage = EncodingModel("S1", 8).crossmodal_language_model()
-    withinmodalVision = EncodingModel("S1", 8).withinmodal_vision_model()
-    faceVision = EncodingModel("S1", 8).faceLand_vision_model("face")
-    landscapeVision = EncodingModel("S1", 8).faceLand_vision_model("landscape")
+    crossmodalVision = EncodingModel("S1", 4).crossmodal_vision_model()
+    crossmodalLanguage = EncodingModel("S1", 4).crossmodal_language_model()
+    withinmodalVision = EncodingModel("S1", 4).withinmodal_vision_model()
+    faceVision = EncodingModel("S1", 4).faceLand_vision_model("face")
+    landscapeVision = EncodingModel("S1", 4).faceLand_vision_model("landscape")
     print("Encoding models completed")

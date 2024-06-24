@@ -15,8 +15,8 @@ From: nvidia/cuda:12.1.0-cudnn8-devel-ubuntu20.04
     # Reduce the size of the image by deleting the package lists we downloaded,
     # which are useless now.
     rm -rf /var/lib/apt/lists/*
-    # Install Python modules.
-    pip3 install numpy scipy torch scikit-learn matplotlib h5py transformers datasets himalaya
+    # Install Python modules and upgrade transformers.
+    pip3 install numpy scipy torch scikit-learn matplotlib h5py transformers --upgrade datasets himalaya
 
 %runscript
     # Run the Python script with the arguments passed to the container
