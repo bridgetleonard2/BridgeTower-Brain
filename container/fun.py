@@ -378,6 +378,12 @@ def alignment(layer):
         captions = data[:, 1, :]
         images = data[:, 0, :]
 
+        # Data should be 2d of shape (n_images/n, num_features)
+        # if data is above 2d, average 2nd+ dimensions
+        if captions.ndim > 2:
+            captions = np.mean(captions, axis=1)
+            images = np.mean(images, axis=1)
+
         alphas = np.logspace(1, 20, 20)
         scaler = StandardScaler(with_mean=True, with_std=False)
 
