@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # First retrieve files from Hyak
+# Set var:
+# $subject = "S1"
+# $layer = "4"
+
 # Retrieve movie_to_story results
 # scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/results/movie_to_story/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/movie_to_story/$subject"
 
