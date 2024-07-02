@@ -378,12 +378,18 @@ def alignment(layer):
         captions = data[:, 1, :]
         images = data[:, 0, :]
 
+        num_nans_captions = np.isnan(captions).sum()
+        num_nans_images = np.isnan(images).sum()
+        print(f"Number of NaNs in captions: {num_nans_captions}")
+        print(f"Number of NaNs in images: {num_nans_images}")
+
         # Data should be 2d of shape (n_images/n, num_features)
         # if data is above 2d, average 2nd+ dimensions
         if captions.ndim > 2:
-            captions = np.nanmean(captions, axis=1)
-            images = np.nanmean(images, axis=1)
+            captions = np.mean(captions, axis=1)
+            images = np.mean(images, axis=1)
 
+        print(captions.shape, images.shape)
         alphas = np.logspace(1, 20, 20)
         scaler = StandardScaler(with_mean=True, with_std=False)
 
@@ -399,13 +405,15 @@ def alignment(layer):
 
         _ = pipeline.fit(images, captions)
         coef_images_to_captions = backend.to_numpy(pipeline[-1].coef_)
+        # fix divide by zero error
+        epsilon = 1e-10
         coef_images_to_captions /= np.linalg.norm(coef_images_to_captions,
-                                                  axis=0)[None]
+                                                  axis=0)[None] + epsilon
 
         _ = pipeline.fit(captions, images)
         coef_captions_to_images = backend.to_numpy(pipeline[-1].coef_)
         coef_captions_to_images /= np.linalg.norm(coef_captions_to_images,
-                                                  axis=0)[None]
+                                                  axis=0)[None] + epsilon
 
         print("Finished feature alignment, saving coefficients")
         # Save coefficients
@@ -1177,3 +1185,8 @@ def faceLandscape_prediction(subject, modality, layer, vision_encoding_matrix):
                 average_predictions)
 
     return average_predictions
+
+
+# test alignment
+if __name__ == "__main__":
+    alignment(4)
