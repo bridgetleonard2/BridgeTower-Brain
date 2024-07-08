@@ -197,7 +197,7 @@ def get_movie_features(movie, subject, layer, n=30):
         print("Got movie features")
 
         # Data should be 2d of shape (n_images/n, num_features)
-        # if data is above 2d, average 2nd+ dimensions
+        # if data is above 2d, flatten all but first dim
         if data.ndim > 2:
             data = np.mean(data, axis=1)
 
@@ -405,15 +405,33 @@ def alignment(layer):
 
         _ = pipeline.fit(images, captions)
         coef_images_to_captions = backend.to_numpy(pipeline[-1].coef_)
-        # fix divide by zero error
+
+        # Check if zeroes in coef_images_to_captions
+        num_zeroes_im_to_cap = np.count_nonzero(coef_images_to_captions == 0)
+        print("image to caption zeros:", num_zeroes_im_to_cap)
+
         epsilon = 1e-10
+
+        if num_zeroes_im_to_cap > 0:
+            coef_images_to_captions = coef_images_to_captions.astype(float)
+            coef_images_to_captions[coef_images_to_captions == 0] = epsilon
+
         coef_images_to_captions /= np.linalg.norm(coef_images_to_captions,
-                                                  axis=0)[None] + epsilon
+                                                  axis=0)[None]
 
         _ = pipeline.fit(captions, images)
         coef_captions_to_images = backend.to_numpy(pipeline[-1].coef_)
+
+        # Check if zeroes in coef_captions_to_images
+        num_zeroes_cap_to_im = np.count_nonzero(coef_captions_to_images == 0)
+        print("caption to image zeros:", num_zeroes_cap_to_im)
+
+        if num_zeroes_cap_to_im > 0:
+            coef_captions_to_images = coef_captions_to_images.astype(float)
+            coef_captions_to_images[coef_captions_to_images == 0] = epsilon
+
         coef_captions_to_images /= np.linalg.norm(coef_captions_to_images,
-                                                  axis=0)[None] + epsilon
+                                                  axis=0)[None]
 
         print("Finished feature alignment, saving coefficients")
         # Save coefficients
