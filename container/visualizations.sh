@@ -6,17 +6,17 @@
 # $layer = "4"
 
 # Retrieve movie_to_story results
-# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/results/movie_to_story/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/movie_to_story/$subject"
+# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/bridgetower-brain/results/movie_to_story/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/movie_to_story/$subject"
 
 # # Retrieve story_to_movie results
-# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/results/story_to_movie/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/story_to_movie/$subject"
+# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/bridgetower-brain/results/story_to_movie/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/story_to_movie/$subject"
 
 # # Retrieve within vision model results
-# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/results/vision_model/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/vision_only/$subject"
+# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/bridgetower-brain/results/vision_model/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/vision_only/$subject"
 
 # # Retrieve face and landscape results
-# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/results/faces/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/face_check/$subject"
-# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/results/landscapes/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/landscape_check/$subject"
+# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/bridgetower-brain/results/faces/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/face_check/$subject"
+# scp -r bll313@klone.hyak.uw.edu:/mmfs1/gscratch/scrubbed/bll313/bridgetower-brain/results/landscapes/$subject/layer$layer* "C:/Users/Bridget Leonard/Desktop/BridgeTower-Brain/results/landscape_check/$subject"
 
 # Get script arguments
 subject=$1
